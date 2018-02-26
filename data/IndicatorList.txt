@@ -1,0 +1,22 @@
+QEtype	QualityElement	QualitySubelement	Indicator	Parameter	Measurement	IndicatorDescription
+Biological	Phytoplankton	Phytoplankton biomass	CoastChla	chla	Chlorophyll a	Chlorophyll a
+Biological	Phytoplankton	Phytoplankton biomass	CoastChlaEQR	chla	Chlorophyll a	Chlorophyll a (EQR)
+Biological	Phytoplankton	Phytoplankton biomass	CoastBiovol	biovol	Phytoplankton biovolume	Phytoplankton biovolume
+Biological	Phytoplankton	Phytoplankton biomass	CoastBiovolEQR	biovol	Phytoplankton biovolume	Phytoplankton biovolume (EQR)
+Biological	Benthic fauna	Composition and diversity	CoastBQI	BQI	BQI	Benthic Quality Index (BQI)
+Biological	Benthic vegetation	Composition and abundance	CoastMSMDI	MSMDI	MSMDI	Multi-Species Maximum Depth Index (MSMDI)
+Supporting	Water transparency	Secchi depth	CoastSecchi	secchi	Secchi depth	Secchi Depth
+Supporting	Water transparency	Secchi depth	CoastSecchiEQR	secchi	Secchi depth	Secchi Depth (EQR)
+Supporting	Nutrients	Nitrogen	CoastDINsummer	DIN	Dissolved inorganic Nitrogen	Summer DIN concentration
+Supporting	Nutrients	Nitrogen	CoastTNsummer	TN	Total Nitrogen	Summer TN concentration
+Supporting	Nutrients	Nitrogen	CoastTNwinter	TN	Total Nitrogen	Winter TN concentration
+Supporting	Nutrients	Phosphorus	CoastDIPsummer	DIP	Dissolved inorganic Phosphorus	Summer DIP
+Supporting	Nutrients	Phosphorus	CoastTPsummer	TP	Total Phosphorus	Summer TP
+Supporting	Nutrients	Phosphorus	CoastTPwinter	TP	Total Phosphorus	Winter TP
+Supporting	Nutrients	Nitrogen	CoastDINsummerEQR	DIN	Dissolved inorganic Nitrogen	Summer DIN concentration (EQR)
+Supporting	Nutrients	Nitrogen	CoastTNsummerEQR	TN	Total Nitrogen	Summer TN concentration (EQR)
+Supporting	Nutrients	Nitrogen	CoastTNwinterEQR	TN	Total Nitrogen	Winter TN concentration (EQR)
+Supporting	Nutrients	Phosphorus	CoastDIPsummerEQR	DIP	Dissolved inorganic Phosphorus	Summer DIP (EQR)
+Supporting	Nutrients	Phosphorus	CoastTPsummerEQR	TP	Total Phosphorus	Summer TP (EQR)
+Supporting	Nutrients	Phosphorus	CoastTPwinterEQR	TP	Total Phosphorus	Winter TP (EQR)
+Supporting	Oxygen	Oxygen	CoastOxygen	O2	Oxygen	Oxygen Concentration
