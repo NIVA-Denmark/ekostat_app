@@ -170,7 +170,8 @@ shinyServer(function(input, output, session) {
     # until we can clear up the waterbodies with multiple typologies, we need this fix
     df <- df %>% filter(typology==typeselect())
     cat(paste0("df.select nrows=",nrow(df)))
-    #df$date<-as.Date(df$date,origin="1960-10-01")
+    df$date<-as.Date(df$date,origin="1970-01-01")
+    #df$date<-as.Date(as.POSIXlt,origin="1970-10-01")
     return(df)
   })
   
@@ -224,18 +225,7 @@ shinyServer(function(input, output, session) {
   
   RoundColList <-
     c(
-      "secchi",
-      "temp",
-      "sali",
-      "chla" ,
-      "biovol",
-      "TP",
-      "TN",
-      "dens_dif",
-      "BQI",
-      "MSMDI",
-      "logitMSMDI",
-      "Oxygen"
+      "secchi","temp","sali","chla" ,"biovol","TP","TN","dens_dif","BQI","MSMDI","logitMSMDI","Oxygen"
     )
   
   output$nText <- renderText({
@@ -248,45 +238,13 @@ shinyServer(function(input, output, session) {
       str(paste0("dfMC updated n=", nrow(values$resMC)))
       if (input$chkClassBnds == TRUE) {
         grplist <- c(
-          "WB",
-          "Type",
-          "Period",
-          "QEtype",
-          "QualityElement",
-          "QualitySubelement",
-          "Indicator",
-          "IndSubtype",
-          "Months",
-          "Unit",
-          "Note",
-          "Worst",
-          "PB",
-          "MP",
-          "GM",
-          "HG",
-          "Ref",
-          "Mean",
-          "StdErr",
-          "EQR",
-          "Class"
+          "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator","IndSubtype",
+          "Months","Unit","Note","Worst","PB","MP","GM","HG","Ref","Mean","StdErr","EQR","Class"
         )
       } else{
         grplist <- c(
-          "WB",
-          "Type",
-          "Period",
-          "QEtype",
-          "QualityElement",
-          "QualitySubelement",
-          "Indicator",
-          "IndSubtype",
-          "Months",
-          "Unit",
-          "Note",
-          "Mean",
-          "StdErr",
-          "EQR",
-          "Class"
+          "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator",
+          "IndSubtype","Months","Unit","Note","Mean","StdErr","EQR","Class"
         )
       }
       
@@ -317,45 +275,13 @@ shinyServer(function(input, output, session) {
       str(paste0("dfMC updated n=", nrow(values$resMC)))
       if (input$chkClassBnds == TRUE) {
         grplist <- c(
-          "WB",
-          "Type",
-          "Period",
-          "QEtype",
-          "QualityElement",
-          "QualitySubelement",
-          "Indicator",
-          "IndSubtype",
-          "Note",
-          "Unit",
-          "Months",
-          "Worst",
-          "PB",
-          "MP",
-          "GM",
-          "HG",
-          "Ref",
-          "Mean",
-          "StdErr",
-          "EQR",
-          "Class"
+          "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator","IndSubtype",
+          "Note","Unit","Months","Worst","PB","MP","GM","HG","Ref","Mean","StdErr","EQR","Class"
         )
       } else{
         grplist <- c(
-          "WB",
-          "Type",
-          "Period",
-          "QEtype",
-          "QualityElement",
-          "QualitySubelement",
-          "Indicator",
-          "IndSubtype",
-          "Note",
-          "Unit",
-          "Months",
-          "Mean",
-          "StdErr",
-          "EQR",
-          "Class"
+          "WB","Type","Period","QEtype","QualityElement","QualitySubelement",
+          "Indicator","IndSubtype","Note","Unit","Months","Mean","StdErr","EQR","Class"
         )
       }
       
@@ -418,22 +344,9 @@ shinyServer(function(input, output, session) {
       }
       grplist <-
         c(
-          "WB",
-          "Type",
-          "Period",
-          "QEtype",
-          "QualityElement",
-          "QualitySubelement",
-          "Indicator",
-          "IndSubtype",
-          "Note",
-          "Unit",
-          "Months",
+          "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator","IndSubtype","Note","Unit","Months",
           #"Worst","PB","MP","GM","HG","Ref",
-          "Mean",
-          "StdErr",
-          "EQR",
-          "Class"
+          "Mean","StdErr","EQR","Class"
         )
       output$resTableMC <- ClassOutputTableDT(
         df,
@@ -582,14 +495,7 @@ shinyServer(function(input, output, session) {
       Aggregate(df,
                 Groups = c("WB", "Period", "Type"),
                 level = 4) %>%
-      select(WB,
-             Type,
-             Period,
-             QEtype,
-             QualityElement,
-             QualitySubelement,
-             EQR,
-             Class)
+      select(WB,Type,Period,QEtype,QualityElement,QualitySubelement,EQR,Class)
     values$res4MC <- res4MC %>% left_join(res4Avg)
     
     values$resInd <- ""
@@ -695,13 +601,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(values$res3MC, {
     grplist <-
-      c("WB",
-        "Period",
-        "Type",
-        "QEtype",
-        "QualityElement",
-        "EQR",
-        "Class")
+      c("WB","Period","Type","QEtype","QualityElement","EQR","Class")
     rmlist = c("WB", "Period", "Type", "QEtype")
     output$resTable3 <-
       ClassOutputTableDT(
@@ -724,14 +624,7 @@ shinyServer(function(input, output, session) {
   observeEvent(values$res4MC, {
     grplist <-
       c(
-        "WB",
-        "Period",
-        "Type",
-        "QEtype",
-        "QualityElement",
-        "QualitySubelement",
-        "EQR",
-        "Class"
+        "WB","Period","Type","QEtype","QualityElement","QualitySubelement","EQR","Class"
       )
     rmlist = c("WB", "Period", "Type", "QEtype", "QualityElement")
     output$resTable4 <-
@@ -754,34 +647,10 @@ shinyServer(function(input, output, session) {
   
   observeEvent(values$resInd, {
     grplist <- c(
-      "WB",
-      "Type",
-      "Period",
-      "QEtype",
-      "QualityElement",
-      "QualitySubelement",
-      "Indicator",
-      "IndSubtype",
-      "Note",
-      "Unit",
-      "Months",
-      "Worst",
-      "PB",
-      "MP",
-      "GM",
-      "HG",
-      "Ref",
-      "Mean",
-      "StdErr",
-      "EQR",
-      "Class"
+      "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator",
+      "IndSubtype","Note","Unit","Months","Worst","PB","MP","GM","HG","Ref","Mean","StdErr","EQR","Class"
     )
-    rmlist <- c("WB",
-                "Type",
-                "Period",
-                "QEtype",
-                "QualityElement",
-                "QualitySubelement")
+    rmlist <- c("WB","Type","Period","QEtype","QualityElement","QualitySubelement")
     
     output$resTableInd <- ClassOutputTableDT(
       values$resInd,
@@ -807,11 +676,13 @@ shinyServer(function(input, output, session) {
       vars <- ""
     }
     
+    cat(paste0("value$resObs [",typeof(values$resObs),"]\n"))
+    
     output$resTableObs <-
       ClassObsTableDT(values$resObs, sDOM = "pl", roundlist = vars)
-    
     output$titleTableObs <- renderText({
-      if (values$resObs == "") {
+      if (typeof(values$resObs)!="list") {
+      #if (values$resObs == "") {
         ""
       } else{
         "<h3>Observations:</h3>"
@@ -820,17 +691,21 @@ shinyServer(function(input, output, session) {
     
     
     output$plotObs <- renderPlot({
-      if (values$resObs == "") {
+      if (typeof(values$resObs)!="list") {
+      #if (values$resObs == "") {
         p <- 0
       } else{
+       #filename<-paste0("www/restableobs",Sys.time(),".Rda")
+       #save(output$resTableObs,filename)
         yvar <- vars[length(vars)]
         
         df <- values$resObs
-        df$date <- as.Date(df$date,origin="1960-10-01")
+        #df$date <- as.Date(df$date,origin="1970-10-01")
         df$station <- as.factor(df$station)
         
         p <- ggplot(df, aes_string(x = "date", y = yvar, colour="station")) + geom_point(size=2) 
-        p <- p + theme_minimal(base_size = 16) #+ scale_fill_manual(values = c("red", "blue", "green", "black")) #+scale_colour_tableau("station") #,
+        p <- p + theme_minimal(base_size = 16) + scale_x_date(date_labels= "%d-%b-%y") + xlab("Date") 
+        #+ scale_fill_manual(values = c("red", "blue", "green", "black")) #+scale_colour_tableau("station") #,
         
       }
       return(p)
