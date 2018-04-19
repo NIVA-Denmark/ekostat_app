@@ -32,7 +32,6 @@ shinyServer(function(input, output, session) {
     tagList(
       selectInput(
         "district",
-        #"Select Water District",
         "Select Waterbody Type",
         choices = district_list(),
         selected = ""
@@ -48,7 +47,7 @@ shinyServer(function(input, output, session) {
   
   period_list <- reactive({
     period<-c("2001-2006","2007-2012","2013-2016")
-    res <- period #data.frame(period, stringsAsFactors=F)
+    res <- period 
     return(res)
   })
   
@@ -77,7 +76,6 @@ shinyServer(function(input, output, session) {
   output$dataButton <- renderUI({
     if (datacount() > 0) {
       buttontext <-"Get data"
-        #paste0("Get ", as.character(datacount()), " rows of data.")
       tagList(actionButton("dataButton", buttontext))
     }
   })  
@@ -146,7 +144,6 @@ shinyServer(function(input, output, session) {
     # until we can clear up the waterbodies with multiple typologies, we need this fix
     sType<-unlist(strsplit(input$district," "))
     cat(paste0("Type=",sType[[1]],"\n"))
-    #df <- df %>% filter(typology==sType[[1]])
     return(sType[[1]])
   })
   
@@ -198,7 +195,6 @@ shinyServer(function(input, output, session) {
       values$res4MC <- ""
       values$resInd <- ""
       values$resObs <- ""
-      #browser()
       updateNavbarPage(session, "inTabset", selected = "Results")
     } else{
       #no indicators selected
@@ -327,7 +323,6 @@ shinyServer(function(input, output, session) {
           Class = ClassAvg,
           EQR = EQRavg
         )
-      #browser()
       if (!input$IgnoreErr) {
         df <- ClearErrorValues(df, varList = c("EQR", "Class", "EQRMC", "ClassMC"))
       }
@@ -447,7 +442,6 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$resTable3_rows_selected, {
-    #n<-input$resTable3_rows_selected
     df <-
       values$res3MC %>% group_by(QualityElement) %>% summarise() %>% ungroup()
     values$sQualityElement <-
@@ -521,11 +515,12 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$resTableInd_rows_selected, {
-    #n<-input$resTableInd_rows_selected
     df <-
       values$resInd %>% group_by(Indicator) %>% summarise() %>% ungroup()
     values$sIndicator <-
       df$Indicator[input$resTable4_rows_selected]
+    
+    cat(paste0("Indicator=",values$sIndicator,"\n"))
     
     df <- SelectObs(
       df.select(),
@@ -546,7 +541,6 @@ shinyServer(function(input, output, session) {
       "<h3>No results</h3>"
     } else{
       if (typeof(values$res1MC)!="list") {
-        #if (values$res1MC == "") {
         "<h3>No results</h3>" # style='color:#FF0000';
       } else{
         "<h3>Overall Results:</h3>"
@@ -580,7 +574,6 @@ shinyServer(function(input, output, session) {
     
     output$titleTable2 <- renderText({
       if (typeof(values$res2MC)!="list") {
-        #if (values$res2MC == "") {
         ""
       } else{
         "<h3>Biological/Supporting:</h3>"
@@ -605,7 +598,6 @@ shinyServer(function(input, output, session) {
     
     output$titleTable3 <- renderText({
       if (typeof(values$res3MC)!="list") {
-        #if (values$res3MC == "") {
         ""
       } else{
         "<h3>QualityElement:</h3>"
@@ -630,7 +622,6 @@ shinyServer(function(input, output, session) {
     
     output$titleTable4 <- renderText({
       if (typeof(values$res4MC)!="list") {
-        #if (values$res4MC == "") {
         ""
       } else{
         "<h3>Subelement:</h3>"
@@ -677,7 +668,6 @@ shinyServer(function(input, output, session) {
       ClassObsTableDT(values$resObs, sDOM = "pl", roundlist = vars)
     output$titleTableObs <- renderText({
       if (typeof(values$resObs)!="list") {
-      #if (values$resObs == "") {
         ""
       } else{
         "<h3>Observations:</h3>"
@@ -688,6 +678,7 @@ shinyServer(function(input, output, session) {
     output$plotObs <- renderPlot({
       if (typeof(values$resObs)!="list") {
         p <- 0
+        cat("value=",paste0(values$resObs[1]),"\n")
       } else{
         yvar <- vars[length(vars)]
         
