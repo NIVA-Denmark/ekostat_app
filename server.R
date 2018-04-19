@@ -3,8 +3,6 @@ library(DT)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
-#library(haven)
-#library(lme4)
 library(lubridate)
 library(prodlim)
 library(sparkline)
@@ -18,18 +16,11 @@ shinyServer(function(input, output, session) {
   dfind<-ReadIndicatorType()
   
   db <- dbConnect(SQLite(), dbname="data/ekostat.db")
-  wb <- dbGetQuery(db, "SELECT * FROM WB")  #population WHERE DATE(timeStamp) < DATE('now', 'weekday 0', '-7 days')")
+  wb <- dbGetQuery(db, "SELECT * FROM WB")
   wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
   DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
   wb$DistrictID<-factor(wb$DistrictID, levels=DistrictList)
   dbDisconnect(db)
-  
-  
-  #dbWriteTable(conn = db, name = "resAvg", resAvg, overwrite=T, row.names=FALSE)
-  #dbWriteTable(conn = db, name = "resMC", resMC, overwrite=T, row.names=FALSE)
-  #dbWriteTable(conn = db, name = "resErr", resErr, overwrite=T, row.names=FALSE)
-  #dbWriteTable(conn = db, name = "WB", WB, overwrite=T, row.names=FALSE)
-  #dbWriteTable(conn = db, name = "data", df, overwrite=T, row.names=FALSE)
   
   values <- reactiveValues(resMC = data.frame())
   
@@ -98,7 +89,6 @@ shinyServer(function(input, output, session) {
     wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
     
     sql<-paste0("SELECT COUNT(*) FROM data WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
-    #cat(paste0(sql,"\n"))
     nrows <- dbGetQuery(db, sql)
     dbDisconnect(db)
     
@@ -170,8 +160,8 @@ shinyServer(function(input, output, session) {
     # until we can clear up the waterbodies with multiple typologies, we need this fix
     df <- df %>% filter(typology==typeselect())
     cat(paste0("df.select nrows=",nrow(df)))
+    
     df$date<-as.Date(df$date,origin="1970-01-01")
-    #df$date<-as.Date(as.POSIXlt,origin="1970-10-01")
     return(df)
   })
   
@@ -199,8 +189,7 @@ shinyServer(function(input, output, session) {
       resMC <- resMC %>% filter(Indicator %in% IndList) %>% filter(Type==typeselect())
       resErr <- resErr %>% filter(Indicator %in% IndList) %>% filter(Type==typeselect())
       
-      #save(AssessmentResults,file="results.Rda")
-      
+     
       values$resAvg <- resAvg
       values$resMC <- resMC
       values$resErr <- resErr
@@ -556,7 +545,8 @@ shinyServer(function(input, output, session) {
     if (is.null(values$res1MC)) {
       "<h3>No results</h3>"
     } else{
-      if (values$res1MC == "") {
+      if (typeof(values$res1MC)!="list") {
+        #if (values$res1MC == "") {
         "<h3>No results</h3>" # style='color:#FF0000';
       } else{
         "<h3>Overall Results:</h3>"
@@ -589,7 +579,8 @@ shinyServer(function(input, output, session) {
     )
     
     output$titleTable2 <- renderText({
-      if (values$res2MC == "") {
+      if (typeof(values$res2MC)!="list") {
+        #if (values$res2MC == "") {
         ""
       } else{
         "<h3>Biological/Supporting:</h3>"
@@ -613,7 +604,8 @@ shinyServer(function(input, output, session) {
       )
     
     output$titleTable3 <- renderText({
-      if (values$res3MC == "") {
+      if (typeof(values$res3MC)!="list") {
+        #if (values$res3MC == "") {
         ""
       } else{
         "<h3>QualityElement:</h3>"
@@ -637,7 +629,8 @@ shinyServer(function(input, output, session) {
       )
     
     output$titleTable4 <- renderText({
-      if (values$res4MC == "") {
+      if (typeof(values$res4MC)!="list") {
+        #if (values$res4MC == "") {
         ""
       } else{
         "<h3>Subelement:</h3>"
@@ -661,7 +654,8 @@ shinyServer(function(input, output, session) {
       colOK = 3
     )
     output$titleTableInd <- renderText({
-      if (values$resInd == "") {
+      if (typeof(values$resInd)!="list") {
+        #if (values$resInd == "") {
         ""
       } else{
         "<h3>Indicators:</h3>"
@@ -670,6 +664,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(values$resObs, {
+    #if (typeof(values$sIndicator)=="list") {
     if (!is.null(values$sIndicator)) {
       vars = GetVarNames(values$sIndicator)
     } else{
@@ -692,21 +687,16 @@ shinyServer(function(input, output, session) {
     
     output$plotObs <- renderPlot({
       if (typeof(values$resObs)!="list") {
-      #if (values$resObs == "") {
         p <- 0
       } else{
-       #filename<-paste0("www/restableobs",Sys.time(),".Rda")
-       #save(output$resTableObs,filename)
         yvar <- vars[length(vars)]
         
         df <- values$resObs
-        #df$date <- as.Date(df$date,origin="1970-10-01")
         df$station <- as.factor(df$station)
         
         p <- ggplot(df, aes_string(x = "date", y = yvar, colour="station")) + geom_point(size=2) 
-        p <- p + theme_minimal(base_size = 16) + scale_x_date(date_labels= "%d-%b-%y") + xlab("Date") 
-        #+ scale_fill_manual(values = c("red", "blue", "green", "black")) #+scale_colour_tableau("station") #,
-        
+        p <- p + theme_minimal(base_size = 16) + scale_x_date(date_labels= "%d-%m-%Y") + xlab("Date") 
+
       }
       return(p)
     }, height = 400, width = 600)

@@ -26,11 +26,7 @@ shinyUI(
                                                     'text/comma-separated-values,text/plain', 
                                                     '.csv'))  
                         )
-                        #,
-                        #tabPanel("Save",
-                        #          p(strong("Save the current assessment")),
-                        #          downloadButton('downloadData', label="Save") 
-                        #)
+                        
                       )
                       
              ),
@@ -93,10 +89,6 @@ shinyUI(
                           )
                           
                  )
-               )#,
-               
-               #fluidRow(column(width=12,
-               #                downloadButton('downloadReport', label="Download report")
-               #))
+               )
              )
   ))
