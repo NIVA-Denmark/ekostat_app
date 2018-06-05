@@ -6,9 +6,15 @@
 #
 ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
                              ymin=0,ymax=0,
-                             barwidthpx=c("20px","20px","20px","20px","20px","0px"),barcolours=c('#FF2B00','#FF8066','#FFD5CC','#99FF66','#33AA00',"#FFFFFF"),
+                             barwidthpx=c("20px","20px","20px","20px","20px","0px"),
+                             barcolours=c('#FF0000','#FFC000','#FFFF00','#92D050','#00B0F0',"#FFFFFF"),
                              remove="",roundlist=NULL,colOK=0,
                              sDOM="t"){
+  
+  
+  
+  
+  
   
   
   if(is.data.frame(df)){

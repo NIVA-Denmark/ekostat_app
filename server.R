@@ -46,7 +46,8 @@ shinyServer(function(input, output, session) {
   })
   
   period_list <- reactive({
-    period<-c("2001-2006","2007-2012","2013-2016")
+    period<-c("2004-2009","2010-2015","2016-2021")
+    #period<-c("2001-2006","2007-2012","2013-2016")
     res <- period 
     return(res)
   })
@@ -97,27 +98,36 @@ shinyServer(function(input, output, session) {
   output$chkIndicators <- renderUI({
     if (datacount() > 0) {
       Choices<-c("CoastChlaEQR",
-                 "CoastTNsummerEQR",
-                 "CoastTNwinterEQR",
-                 "CoastTPsummerEQR",
-                 "CoastTPwinterEQR",
-                 "CoastDINsummerEQR",
-                 "CoastDIPsummerEQR",
-                 "CoastSecchiEQR",
+                 "CoastBiovolEQR",
+                 "CoastTNsummer",
+                 "CoastTNwinter",
+                 "CoastTPsummer",
+                 "CoastTPwinter",
+                 "CoastDINwinter",
+                 "CoastDIPwinter",
+                 "CoastSecchi",
                  "CoastBQI","CoastMSMDI","CoastOxygen") 
       
        sList = c("Chlorophyll a (EQR)" = "CoastChlaEQR",
-                "Summer TN (EQR)" = "CoastTNsummerEQR",
-                "Winter TN (EQR)" = "CoastTNwinterEQR",
-                "Summer TP (EQR)" = "CoastTPsummerEQR",
-                "Winter TP (EQR)" = "CoastTPwinterEQR",
-                "Summer DIN (EQR)" = "CoastDINsummerEQR",
-                "Summer DIP (EQR)" = "CoastDIPsummerEQR",
-                "Secchi Depth (EQR)" = "CoastSecchiEQR",
+                "Phytoplankton Biovolume (EQR)" = "CoastBiovolEQR",
+                "Summer TN" = "CoastTNsummer",
+                "Winter TN" = "CoastTNwinter",
+                "Summer TP" = "CoastTPsummer",
+                "Winter TP" = "CoastTPwinter",
+                "Winter DIN" = "CoastDINwinter",
+                "Winter DIP" = "CoastDIPwinter",
+                "Secchi Depth" = "CoastSecchi",
                 "Benthic Quality Index (BQI)" = "CoastBQI",
                 "Multi Species Maximum Depth Index (MSMDI)" = "CoastMSMDI",
                 "Dissolved Oxygen (O2)" = "CoastOxygen")
-      
+#       "Secchi Depth (EQR)" = "CoastSecchiEQR",
+#       "Winter DIN (EQR)" = "CoastDINsummerEQR",
+#       "Winter DIP (EQR)" = "CoastDIPsummerEQR",
+       # "Summer TN (EQR)" = "CoastTNsummerEQR",
+       # "Winter TN (EQR)" = "CoastTNwinterEQR",
+       # "Summer TP (EQR)" = "CoastTPsummerEQR",
+       # "Winter TP (EQR)" = "CoastTPwinterEQR",
+       
       tagList(checkboxGroupInput("indSelect", "Indicators:",
                                  sList, selected = Choices))
       
