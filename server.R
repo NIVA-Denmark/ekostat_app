@@ -46,7 +46,8 @@ shinyServer(function(input, output, session) {
   })
   
   period_list <- reactive({
-    period<-c("2001-2006","2007-2012","2013-2016")
+    period<-c("2004-2009","2010-2015","2016-2021")
+    #period<-c("2001-2006","2007-2012","2013-2016")
     res <- period 
     return(res)
   })
@@ -97,27 +98,32 @@ shinyServer(function(input, output, session) {
   output$chkIndicators <- renderUI({
     if (datacount() > 0) {
       Choices<-c("CoastChlaEQR",
+                 "CoastBiovolEQR",
                  "CoastTNsummerEQR",
                  "CoastTNwinterEQR",
                  "CoastTPsummerEQR",
                  "CoastTPwinterEQR",
-                 "CoastDINsummerEQR",
-                 "CoastDIPsummerEQR",
+                 "CoastDINwinterEQR",
+                 "CoastDIPwinterEQR",
                  "CoastSecchiEQR",
-                 "CoastBQI","CoastMSMDI","CoastOxygen") 
+                 "CoastBQI",
+                 "CoastMSMDI",
+                 "CoastOxygen") 
       
        sList = c("Chlorophyll a (EQR)" = "CoastChlaEQR",
+                "Phytoplankton Biovolume (EQR)" = "CoastBiovolEQR",
                 "Summer TN (EQR)" = "CoastTNsummerEQR",
                 "Winter TN (EQR)" = "CoastTNwinterEQR",
                 "Summer TP (EQR)" = "CoastTPsummerEQR",
                 "Winter TP (EQR)" = "CoastTPwinterEQR",
-                "Summer DIN (EQR)" = "CoastDINsummerEQR",
-                "Summer DIP (EQR)" = "CoastDIPsummerEQR",
+                "Winter DIN (EQR)" = "CoastDINwinterEQR",
+                "Winter DIP (EQR)" = "CoastDIPwinterEQR",
                 "Secchi Depth (EQR)" = "CoastSecchiEQR",
                 "Benthic Quality Index (BQI)" = "CoastBQI",
                 "Multi Species Maximum Depth Index (MSMDI)" = "CoastMSMDI",
                 "Dissolved Oxygen (O2)" = "CoastOxygen")
-      
+
+       
       tagList(checkboxGroupInput("indSelect", "Indicators:",
                                  sList, selected = Choices))
       
@@ -554,6 +560,7 @@ shinyServer(function(input, output, session) {
       ClassOutputTableDT(
         values$res1MC,
         Groups = c("Region", "WB", "Type", "Typename", "Period", "Class"),
+        roundlist = c("pGES"),
         ClassVar = "ClassMC"
       )
     
@@ -567,7 +574,7 @@ shinyServer(function(input, output, session) {
     output$resTable2 <- ClassOutputTableDT(
       values$res2MC,
       Groups = grplist,
-      roundlist = c("EQR"),
+      roundlist = c("EQR","pGES"),
       remove = rmlist,
       ClassVar = "ClassMC"
     )
@@ -590,7 +597,7 @@ shinyServer(function(input, output, session) {
     output$resTable3 <-
       ClassOutputTableDT(
         values$res3MC,
-        roundlist = c("EQR"),
+        roundlist = c("EQR","pGES"),
         Groups = grplist,
         remove = rmlist,
         ClassVar = "ClassMC"
@@ -614,7 +621,7 @@ shinyServer(function(input, output, session) {
     output$resTable4 <-
       ClassOutputTableDT(
         values$res4MC,
-        roundlist = c("EQR"),
+        roundlist = c("EQR","pGES"),
         Groups = grplist,
         remove = rmlist,
         ClassVar = "ClassMC"
@@ -640,7 +647,7 @@ shinyServer(function(input, output, session) {
       values$resInd,
       Groups = grplist,
       ClassVar = "ClassMC",
-      roundlist = c("Mean", "StdErr", "EQR"),
+      roundlist = c("Mean", "StdErr", "EQR","pGES"),
       remove = rmlist,
       colOK = 3
     )
