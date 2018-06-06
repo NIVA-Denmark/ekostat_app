@@ -99,34 +99,30 @@ shinyServer(function(input, output, session) {
     if (datacount() > 0) {
       Choices<-c("CoastChlaEQR",
                  "CoastBiovolEQR",
-                 "CoastTNsummer",
-                 "CoastTNwinter",
-                 "CoastTPsummer",
-                 "CoastTPwinter",
-                 "CoastDINwinter",
-                 "CoastDIPwinter",
-                 "CoastSecchi",
-                 "CoastBQI","CoastMSMDI","CoastOxygen") 
+                 "CoastTNsummerEQR",
+                 "CoastTNwinterEQR",
+                 "CoastTPsummerEQR",
+                 "CoastTPwinterEQR",
+                 "CoastDINwinterEQR",
+                 "CoastDIPwinterEQR",
+                 "CoastSecchiEQR",
+                 "CoastBQI",
+                 "CoastMSMDI",
+                 "CoastOxygen") 
       
        sList = c("Chlorophyll a (EQR)" = "CoastChlaEQR",
                 "Phytoplankton Biovolume (EQR)" = "CoastBiovolEQR",
-                "Summer TN" = "CoastTNsummer",
-                "Winter TN" = "CoastTNwinter",
-                "Summer TP" = "CoastTPsummer",
-                "Winter TP" = "CoastTPwinter",
-                "Winter DIN" = "CoastDINwinter",
-                "Winter DIP" = "CoastDIPwinter",
-                "Secchi Depth" = "CoastSecchi",
+                "Summer TN (EQR)" = "CoastTNsummerEQR",
+                "Winter TN (EQR)" = "CoastTNwinterEQR",
+                "Summer TP (EQR)" = "CoastTPsummerEQR",
+                "Winter TP (EQR)" = "CoastTPwinterEQR",
+                "Winter DIN (EQR)" = "CoastDINwinterEQR",
+                "Winter DIP (EQR)" = "CoastDIPwinterEQR",
+                "Secchi Depth (EQR)" = "CoastSecchiEQR",
                 "Benthic Quality Index (BQI)" = "CoastBQI",
                 "Multi Species Maximum Depth Index (MSMDI)" = "CoastMSMDI",
                 "Dissolved Oxygen (O2)" = "CoastOxygen")
-#       "Secchi Depth (EQR)" = "CoastSecchiEQR",
-#       "Winter DIN (EQR)" = "CoastDINsummerEQR",
-#       "Winter DIP (EQR)" = "CoastDIPsummerEQR",
-       # "Summer TN (EQR)" = "CoastTNsummerEQR",
-       # "Winter TN (EQR)" = "CoastTNwinterEQR",
-       # "Summer TP (EQR)" = "CoastTPsummerEQR",
-       # "Winter TP (EQR)" = "CoastTPwinterEQR",
+
        
       tagList(checkboxGroupInput("indSelect", "Indicators:",
                                  sList, selected = Choices))
@@ -564,6 +560,7 @@ shinyServer(function(input, output, session) {
       ClassOutputTableDT(
         values$res1MC,
         Groups = c("Region", "WB", "Type", "Typename", "Period", "Class"),
+        roundlist = c("pGES"),
         ClassVar = "ClassMC"
       )
     
@@ -577,7 +574,7 @@ shinyServer(function(input, output, session) {
     output$resTable2 <- ClassOutputTableDT(
       values$res2MC,
       Groups = grplist,
-      roundlist = c("EQR"),
+      roundlist = c("EQR","pGES"),
       remove = rmlist,
       ClassVar = "ClassMC"
     )
@@ -600,7 +597,7 @@ shinyServer(function(input, output, session) {
     output$resTable3 <-
       ClassOutputTableDT(
         values$res3MC,
-        roundlist = c("EQR"),
+        roundlist = c("EQR","pGES"),
         Groups = grplist,
         remove = rmlist,
         ClassVar = "ClassMC"
@@ -624,7 +621,7 @@ shinyServer(function(input, output, session) {
     output$resTable4 <-
       ClassOutputTableDT(
         values$res4MC,
-        roundlist = c("EQR"),
+        roundlist = c("EQR","pGES"),
         Groups = grplist,
         remove = rmlist,
         ClassVar = "ClassMC"
@@ -650,7 +647,7 @@ shinyServer(function(input, output, session) {
       values$resInd,
       Groups = grplist,
       ClassVar = "ClassMC",
-      roundlist = c("Mean", "StdErr", "EQR"),
+      roundlist = c("Mean", "StdErr", "EQR","pGES"),
       remove = rmlist,
       colOK = 3
     )

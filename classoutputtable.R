@@ -29,12 +29,27 @@ ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
         summarize(n=n()) %>% mutate(f = n / sum(n)) %>% 
         complete(X, fill = list(f = 0))
       df.count$f[is.na(df.count$X)]<-0
+
+      ########
+      df.count.GH <- df.count %>% ungroup() %>%
+        mutate(ok=ifelse(is.na(f),0,1)) %>%
+        filter(X %in% c("Good","High")) %>%
+        group_by_(.dots=Groups) %>% 
+        summarize(pGES=sum(f,na.rm=T),ok=sum(ok,na.rm=T)) %>%
+        mutate(pGES=ifelse(ok>0,pGES,NA)) %>%
+        select(-ok)
       
+      df.count <- df.count %>% left_join(df.count.GH)
+      
+      Groups<-c(Groups,"pGES")   
+      #######
+            
       dt<-df.count %>% 
         group_by_(.dots=Groups) %>% 
         summarize(Classes = spk_chr(f,type='bar',barWidth=barwidthpx,chartRangeMin=ymin, chartRangeMax=ymax,
                                     colorMap=barcolours)) %>% 
         ungroup() %>%
+        mutate(pGES=ifelse(Class=='','',pGES)) %>%
         select(-one_of(remove)) %>%
         datatable(escape = F,rownames = F,selection = 'single',
                   options = list(dom=sDOM,fnDrawCallback = htmlwidgets::JS('function(){HTMLWidgets.staticRender();}')))
@@ -67,7 +82,7 @@ ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
 # ClearErrorValues
 #
 #
-ClearErrorValues <- function(df,checkvar="Code",OKvalue=0,varList=c("EQR","Class")){
+ClearErrorValues <- function(df,checkvar="Code",OKvalue=0,varList=c("EQR","Class","pGES")){
   for(var in varList){
     df[df[,checkvar]!=0,var]<-NA
   }
