@@ -134,6 +134,7 @@ shinyServer(function(input, output, session) {
       tagList(actionButton("goButton", "Calculate Status"))
     }
   })
+
   
   # 
   observeEvent(input$dataButton, {
@@ -183,7 +184,7 @@ shinyServer(function(input, output, session) {
       wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
       sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
       resAvg <- dbGetQuery(db, sql)
-      sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
+      sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,") AND sim <= ",nSimMC)
       resMC <- dbGetQuery(db, sql)
       sql<-paste0("SELECT * FROM resErr WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
       resErr <- dbGetQuery(db, sql)
