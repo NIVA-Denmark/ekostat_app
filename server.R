@@ -46,8 +46,8 @@ shinyServer(function(input, output, session) {
   })
   
   period_list <- reactive({
-    period<-c("2004-2009","2010-2015","2016-2021")
-    #period<-c("2001-2006","2007-2012","2013-2016")
+    #period<-c("2004-2009","2010-2015","2016-2021")
+    period<-c("2004-2009","2010-2015")
     res <- period 
     return(res)
   })
