@@ -150,7 +150,7 @@ shinyServer(function(input, output, session) {
   typeselect <- reactive({
     # until we can clear up the waterbodies with multiple typologies, we need this fix
     sType<-unlist(strsplit(input$district," "))
-    cat(paste0("Type=",sType[[1]],"\n"))
+    #cat(paste0("Type=",sType[[1]],"\n"))
     return(sType[[1]])
   })
   
@@ -163,7 +163,7 @@ shinyServer(function(input, output, session) {
     dbDisconnect(db)
     # until we can clear up the waterbodies with multiple typologies, we need this fix
     df <- df %>% filter(typology==typeselect())
-    cat(paste0("df.select nrows=",nrow(df)))
+    cat(paste0("df.select nrows=",nrow(df),"\n"))
     
     df$date<-as.Date(df$date,origin="1970-01-01")
     return(df)
@@ -317,7 +317,7 @@ shinyServer(function(input, output, session) {
           level = 1
         ) %>%
         select(Region, WB, Type, Typename, Period, Class)
-      values$res1MC <- res1MC %>% left_join(res1Avg)
+      values$res1MC <- res1MC %>% left_join(res1Avg,by=c("Region", "WB", "Type", "Typename", "Period"))
     }
   })
   
@@ -367,7 +367,8 @@ shinyServer(function(input, output, session) {
           level = 1
         ) %>%
         select(Region, WB, Type, Typename, Period, Class)
-      values$res1MC <- res1MC %>% left_join(res1Avg)
+      cat("left join res1MC2")
+      values$res1MC <- res1MC %>% left_join(res1Avg,by=c("Region", "WB", "Type", "Typename", "Period"))
     }
     values$res2MC <- ""
     values$res3MC <- ""
@@ -401,7 +402,7 @@ shinyServer(function(input, output, session) {
                 Groups = c("WB", "Period", "Type"),
                 level = 2) %>%
       select(WB, Type, Period, QEtype, EQR, Class)
-    values$res2MC <- res2MC %>% left_join(res2Avg)
+    values$res2MC <- res2MC %>% left_join(res2Avg,by = c("WB", "Period", "Type", "QEtype"))
     values$res3MC <- ""
     values$res4MC <- ""
     values$resInd <- ""
@@ -441,7 +442,7 @@ shinyServer(function(input, output, session) {
                 Groups = c("WB", "Period", "Type"),
                 level = 3) %>%
       select(WB, Type, Period, QEtype, QualityElement, EQR, Class)
-    values$res3MC <- res3MC %>% left_join(res3Avg)
+    values$res3MC <- res3MC %>% left_join(res3Avg,by = c("WB", "Period", "Type", "QualityElement", "QEtype"))
     
     values$res4MC <- ""
     values$resInd <- ""
@@ -486,7 +487,7 @@ shinyServer(function(input, output, session) {
                 Groups = c("WB", "Period", "Type"),
                 level = 4) %>%
       select(WB,Type,Period,QEtype,QualityElement,QualitySubelement,EQR,Class)
-    values$res4MC <- res4MC %>% left_join(res4Avg)
+    values$res4MC <- res4MC %>% left_join(res4Avg,by = c("WB", "Period", "Type", "QualityElement", "QEtype", "QualitySubelement"))
     
     values$resInd <- ""
     values$resObs <- ""
@@ -670,7 +671,7 @@ shinyServer(function(input, output, session) {
       vars <- ""
     }
     
-    cat(paste0("value$resObs [",typeof(values$resObs),"]\n"))
+    #cat(paste0("value$resObs [",typeof(values$resObs),"]\n"))
     
     output$resTableObs <-
       ClassObsTableDT(values$resObs, sDOM = "pl", roundlist = vars)
@@ -686,7 +687,7 @@ shinyServer(function(input, output, session) {
     output$plotObs <- renderPlot({
       if (typeof(values$resObs)!="list") {
         p <- 0
-        cat("value=",paste0(values$resObs[1]),"\n")
+        #cat("value=",paste0(values$resObs[1]),"\n")
       } else{
         yvar <- vars[length(vars)]
         

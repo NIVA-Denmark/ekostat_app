@@ -38,8 +38,7 @@ ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
         summarize(pGES=sum(f,na.rm=T),ok=sum(ok,na.rm=T)) %>%
         mutate(pGES=ifelse(ok>0,pGES,NA)) %>%
         select(-ok)
-      
-      df.count <- df.count %>% left_join(df.count.GH)
+      df.count <- df.count %>% left_join(df.count.GH,by=Groups)
       
       Groups<-c(Groups,"pGES")   
       #######

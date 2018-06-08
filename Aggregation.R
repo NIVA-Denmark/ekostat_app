@@ -56,7 +56,7 @@ Aggregate<-function(df,level=1,Groups="",QE_use_mean=c("Supporting")){
       #Join the dataframe with minimum EQR values back to the QE results to get the name of
       # the QE having the lowest EQR.
       # if there are two QE sharing the same minimum value, then we will get two QEs per Group
-      df_min <- df_min %>% left_join(select(df_res,-c(nInd,nSubE))) 
+      df_min <- df_min %>% left_join(select(df_res,-c(nInd,nSubE)),by=c(GroupsType,"EQR")) 
       df_min <- df_min %>% rename(Worst=QualityElement)
       
       # select only one QE per group 
@@ -78,11 +78,11 @@ Aggregate<-function(df,level=1,Groups="",QE_use_mean=c("Supporting")){
           ungroup() %>%
           select(-n) %>%
           mutate(X=1) %>%
-          left_join(QEtype) %>%
+          left_join(QEtype,by="X") %>%
           select(-X)
           
         df_res1 <- df_gp %>%
-         left_join(df_res) %>% 
+         left_join(df_res,by=GroupsType) %>% 
           select(-c(nInd,nSubE,Worst,Class,EQR)) %>% 
           spread(key=QEtype,value=ClassID) %>%
           mutate(Supporting2=ifelse(is.na(Supporting),5,ifelse(Supporting<3,3,Supporting))) %>%
@@ -91,13 +91,14 @@ Aggregate<-function(df,level=1,Groups="",QE_use_mean=c("Supporting")){
           rename(ClassIDBio=Biological,ClassIDSup=Supporting)
         
         df_res2 <- df_gp %>%
-          left_join(df_res) %>% 
+          left_join(df_res,by=GroupsType) %>% 
           mutate(nInd=ifelse(is.na(nInd),0,nInd)) %>%
           select(-c(ClassID,nSubE,Worst,Class,EQR)) %>% 
           spread(key=QEtype,value=nInd) %>%
           rename(nIndBio=Biological,nIndSup=Supporting)
         
-        df_res <- left_join(df_res1,df_res2)
+        #cat(paste0("left_join df_res  ",unlist(Groups),"\n"))
+        df_res <- left_join(df_res1,df_res2,by=Groups)
         
         Categories<-c("Bad","Poor","Mod","Good","High","Ref")
         df_res$Class<-ifelse(is.na(df_res$ClassID),NA,Categories[df_res$ClassID])
@@ -160,6 +161,8 @@ Frequency<-function(df,Groups="",varname="Class"){
     summarise(n=n()) %>%
     ungroup()
   
+  #cat(paste0("left_join df_res  ",unlist(Groups),"\n"))
+  cat("left_join dft\n")
   dft <- df %>% 
     group_by_(.dots=Groups) %>% 
     summarise(t=n()) %>%
@@ -168,6 +171,7 @@ Frequency<-function(df,Groups="",varname="Class"){
     left_join(ClassID) %>%
     select(-X)
   
+  cat("left_join dfn\n")
   dfn<-dft %>% 
     left_join(dfn) %>%
     mutate(f=n/t) %>%
