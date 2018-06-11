@@ -526,7 +526,7 @@ shinyServer(function(input, output, session) {
     df <-
       values$resInd %>% group_by(Indicator) %>% summarise() %>% ungroup()
     values$sIndicator <-
-      df$Indicator[input$resTable4_rows_selected]
+      df$Indicator[input$resTableInd_rows_selected]
     
     cat(paste0("Indicator=",values$sIndicator,"\n"))
     
