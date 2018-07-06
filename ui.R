@@ -45,7 +45,7 @@ shinyUI(
                           p("Options for Monte Carlo simulations."),
                           numericInput("n",
                                        label = "Number of simulations", min=1,
-                                       value = 200)
+                                       value = 500)
                  )
                )),
              

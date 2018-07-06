@@ -15,7 +15,9 @@ source("Aggregation.R")
 shinyServer(function(input, output, session) {
   dfind<-ReadIndicatorType()
   
-  db <- dbConnect(SQLite(), dbname="data/ekostat.db")
+  dbpath<-"data/ekostat.db"
+  
+  db <- dbConnect(SQLite(), dbname=dbpath)
   wb <- dbGetQuery(db, "SELECT * FROM WB")
   wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
   DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
@@ -83,7 +85,7 @@ shinyServer(function(input, output, session) {
   
   datacount <- reactive({
     
-    db <- dbConnect(SQLite(), dbname="data/ekostat.db")
+    db <- dbConnect(SQLite(), dbname=dbpath)
     periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
     wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
     
@@ -155,7 +157,7 @@ shinyServer(function(input, output, session) {
   })
   
   df.select <- reactive({
-    db <- dbConnect(SQLite(), dbname="data/ekostat.db")
+    db <- dbConnect(SQLite(), dbname=dbpath)
     periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
     wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
     sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
@@ -179,7 +181,7 @@ shinyServer(function(input, output, session) {
  
       n <- nrow(df.select())
       
-      db <- dbConnect(SQLite(), dbname="data/ekostat.db")
+      db <- dbConnect(SQLite(), dbname=dbpath)
       periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
       wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
       sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
@@ -524,7 +526,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$resTableInd_rows_selected, {
     df <-
-      values$resInd %>% group_by(Indicator) %>% summarise() %>% ungroup()
+      values$resInd %>% group_by(Indicator,IndSubtype) %>% summarise() %>% ungroup()
     values$sIndicator <-
       df$Indicator[input$resTableInd_rows_selected]
     
