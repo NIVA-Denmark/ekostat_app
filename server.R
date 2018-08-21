@@ -13,6 +13,28 @@ source("classoutputtable.R")
 source("Aggregation.R")
 
 shinyServer(function(input, output, session) {
+  
+  output$dy_menuX <- renderMenu({
+    menu_list <- list(
+      menuItem("Add Menu Items", tabName = "main", selected = TRUE),
+      menu_vals$menu_list)
+    sidebarMenu(.list = menu_list)
+  })
+  
+  output$dy_menu <- renderMenu({  
+  sidebarMenu(
+      menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker"),
+               menuSubItem('EU ID', tabName = 'wbID'),
+               menuSubItem('Name', tabName = 'wbName'),
+               menuSubItem('Land', tabName = 'wbLand')
+      ),
+      menuItem("Period", tabName = "period", icon = icon("calendar")),
+      menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
+      menuItem("Status", tabName = "status", icon = icon("bar-chart")),
+      menuItem("Download", tabName = "download", icon = icon("file"))
+    )
+  })
+  
   dfind<-ReadIndicatorType()
   
   dbpath<-"data/ekostat.db"
