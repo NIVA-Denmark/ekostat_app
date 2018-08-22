@@ -14,6 +14,37 @@ source("Aggregation.R")
 
 shinyServer(function(input, output, session) {
   
+  dbpath<-"data/ekostat.db"
+  db <- dbConnect(SQLite(), dbname=dbpath)
+  wb_lan <- dbGetQuery(db, "SELECT * FROM WB_Lan")
+  dbDisconnect(db)
+  
+  lan_list <- reactive({
+    Lan <- c("ALL")
+    all <- data.frame(Lan,row.names=F,stringsAsFactors=F)
+    df<-wb_lan %>%
+    distinct(Lan_ID,Lan_name) %>%
+      arrange(Lan_ID) %>%
+      mutate(Lan=paste0(Lan_ID," - ",Lan_name)) %>%
+      select(Lan)
+    df<-bind_rows(all,df)
+    df
+  })
+  
+  wb_list<-reactive({
+    df <- wb_lan
+    values$WBinfo <- ""
+    cat("wb_list\n")
+    if (!is.null(input$lan)){
+      if(input$lan!="ALL"){
+        lanid <- substr(input$lan,1,2)
+        df <- df %>% filter(Lan_ID==lanid)
+      }
+    }
+    return(df)
+  })
+  
+  
   output$dy_menuX <- renderMenu({
     menu_list <- list(
       menuItem("Add Menu Items", tabName = "main", selected = TRUE),
@@ -22,19 +53,96 @@ shinyServer(function(input, output, session) {
   })
   
   output$dy_menu <- renderMenu({  
-  sidebarMenu(
-      menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker"),
-               menuSubItem('EU ID', tabName = 'wbID'),
-               menuSubItem('Name', tabName = 'wbName'),
-               menuSubItem('Land', tabName = 'wbLand')
-      ),
-      menuItem("Period", tabName = "period", icon = icon("calendar")),
+      sidebarMenu(id="tabs",
+      menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker")),
+      uiOutput("selectLan"),
       menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
       menuItem("Status", tabName = "status", icon = icon("bar-chart")),
-      menuItem("Download", tabName = "download", icon = icon("file"))
-    )
+      menuItem("Download", tabName = "download", icon = icon("file")))
   })
   
+  
+  output$dtwb = DT::renderDataTable({
+    df <- wb_list()
+    names(df)<-c("Län ID","Län", "WB ID", "WB Name", "District", "Type")
+    df
+  }, selection = 'single', rownames= F,options = list(lengthMenu = c(5, 10, 20, 50), pageLength = 5))
+  
+  output$selectLan <- renderUI({
+    tagList(selectInput(
+      "lan",
+      "Län:",
+      choices = lan_list(),
+      multiple = FALSE
+    ))
+    })
+  
+  observeEvent(input$dtwb_rows_selected, {
+    if (length(input$dtwb_rows_selected) > 0) {
+    n<-input$dtwb_rows_selected
+    df<-wb_list()
+    wbidselect<-df[n,"WB_ID"]
+    wbnameselect<-df[n,"Name"]
+    
+    db <- dbConnect(SQLite(), dbname=dbpath)
+    sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",wbidselect,"')")
+    nrows <- dbGetQuery(db, sql)
+    dbDisconnect(db)
+    
+    values$datacount<-nrows
+    values$WBinfo <- paste0(wbidselect," ",wbnameselect," (n=",nrows,")")
+    cat(paste0("WB selected: ",n," ",wbidselect," nrows=",nrows,"\n"))
+    }
+    })
+    
+  
+  output$wb_info<-renderText({
+    if(typeof(values$WBinfo)!="character"){
+      "none selected"
+    }else{
+      if(values$WBinfo==""){
+        "none selected"
+      }else{
+        values$WBinfo
+      }
+    }
+  }
+  )
+  
+  datacount <- reactive({
+    n<-input$dtwb_rows_selected
+    df<-wb_list()
+    s<-df[n,"WB_ID"]
+    db <- dbConnect(SQLite(), dbname=dbpath)
+    sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",s,"')")
+    nrows <- dbGetQuery(db, sql)
+    dbDisconnect(db)
+    cat(paste0("datarows=",nrows,"\n"))
+    return(nrows)
+  })
+ 
+  output$dataButton <- renderUI({
+    if (datacount() > 0) {
+      buttontext <-"Get data"
+      tagList(actionButton("dataButton", buttontext))
+    }
+  })  
+  
+  observeEvent(input$dataButton, {
+    n <- datacount()
+    output$nrows <- renderUI({
+      tagList(p(renderText(
+        paste0("Selected: ", n, " rows of data.")
+      )))
+    })
+    updateTabItems(session, "tabs", "indicators")
+    #updateNavbarPage(session, "inTabset", selected = "Assessment")
+  })
+  # observeEvent(input$lan, {
+    #     cat(paste0("Selected län: ",input$lan,"\n"))
+    #   })
+  
+ 
   dfind<-ReadIndicatorType()
   
   dbpath<-"data/ekostat.db"
@@ -98,14 +206,8 @@ shinyServer(function(input, output, session) {
     )
   })  
   
-  output$dataButton <- renderUI({
-    if (datacount() > 0) {
-      buttontext <-"Get data"
-      tagList(actionButton("dataButton", buttontext))
-    }
-  })  
   
-  datacount <- reactive({
+  datacount2 <- reactive({
     
     db <- dbConnect(SQLite(), dbname=dbpath)
     periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
@@ -161,15 +263,6 @@ shinyServer(function(input, output, session) {
 
   
   # 
-  observeEvent(input$dataButton, {
-    n <- datacount()
-    output$nrows <- renderUI({
-      tagList(p(renderText(
-        paste0("Selected: ", n, " rows of data.")
-      )))
-    })
-    updateNavbarPage(session, "inTabset", selected = "Assessment")
-  })
   
   typeselect <- reactive({
     # until we can clear up the waterbodies with multiple typologies, we need this fix
