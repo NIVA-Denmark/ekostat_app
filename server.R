@@ -14,53 +14,140 @@ source("Aggregation.R")
 
 shinyServer(function(input, output, session) {
   
+  # Path to the eksostat database
   dbpath<-"data/ekostat.db"
-  db <- dbConnect(SQLite(), dbname=dbpath)
-  wb_lan <- dbGetQuery(db, "SELECT * FROM WB_Lan")
-  dbDisconnect(db)
+  readdb <- function(dbname,strSQL){
+    db <- dbConnect(SQLite(), dbname=dbname)
+    df <- dbGetQuery(db, strSQL)
+    dbDisconnect(db)
+    return(df)
+  }  
+  
+  # Read list of indicators
+  dfind<-ReadIndicatorType()
+  sql<-paste0()
+  dfperiod <- readdb(dbpath, "SELECT DISTINCT(Period) FROM resAvg")
+  
+  # ------------------------ waterbody selection -----------------------------------------------
+  dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan") %>%
+    mutate(TypeName = Type) %>%
+    mutate(Type = substr(Type,1,3)) %>%
+    mutate(Type = gsub(" ","",Type)) %>%
+    mutate(Type = gsub("\\.","",Type)) %>%
+    mutate(Type = gsub(":","",Type)) %>%
+    mutate(TypeNum = gsub("n",".0",Type)) %>%
+    mutate(TypeNum = gsub("s",".5",TypeNum))
+  dfwb_lan$TypeNum <- as.numeric(dfwb_lan$TypeNum)
+  
+    
+  listWaterType<- dfind %>% 
+    distinct(Water_type) %>%
+    rename(Water=Water_type)
+  
+  output$selectWaterType <- renderUI({
+    
+    tagList(selectInput(
+      "waterType",
+      "Water type:",
+      choices = c("Coastal"),
+      #choices = listWaterType,
+      multiple = FALSE,
+      width="180px"
+    ))
+  })
+  
+  output$selectLan <- renderUI({
+    
+    tagList(selectInput(
+      "lan",
+      "Län:",
+      choices = lan_list(),
+      multiple = FALSE,
+      width="180px"
+    ))
+  })
+  
+  output$selectType <- renderUI({
+    tagList(selectInput(
+      "type",
+      "WB Type:",
+      choices = type_list(),
+      multiple = FALSE,
+      width="100px"
+    ))
+  })
+  
+  
+  values <- reactiveValues(resMC = data.frame())
+  
+  
+  wb <- readdb(dbpath, "SELECT * FROM WB")
+  wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
+  DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
+  wb$DistrictID<-factor(wb$DistrictID, levels=DistrictList)
+  
+ 
+  
   
   lan_list <- reactive({
     Lan <- c("ALL")
     all <- data.frame(Lan,row.names=F,stringsAsFactors=F)
-    df<-wb_lan %>%
+    df<-dfwb_lan  %>%
     distinct(Lan_ID,Lan_name) %>%
       arrange(Lan_ID) %>%
       mutate(Lan=paste0(Lan_ID," - ",Lan_name)) %>%
       select(Lan)
     df<-bind_rows(all,df)
-    df
+    df$Lan
   })
-  
+
+  type_list <- reactive({
+    Type <- c("ALL")
+    all <- data.frame(Type,row.names=F,stringsAsFactors=F)
+    df<-dfwb_lan
+    if (!is.null(input$lan)){
+    if(input$lan!="ALL"){
+      lanid <- substr(input$lan,1,2)
+      df <- df %>% filter(Lan_ID==lanid)
+    }}
+    df <- df %>%
+      distinct(Type,TypeNum) %>%
+      arrange(TypeNum) %>%
+      select(Type)
+    df<-bind_rows(all,df)
+    df$Type
+  })
+
+
   wb_list<-reactive({
-    df <- wb_lan
+    df <- dfwb_lan
     values$WBinfo <- ""
-    cat("wb_list\n")
     if (!is.null(input$lan)){
       if(input$lan!="ALL"){
         lanid <- substr(input$lan,1,2)
         df <- df %>% filter(Lan_ID==lanid)
       }
     }
+    if (!is.null(input$type)){
+      if(input$type!="ALL"){
+        df <- df %>% filter(Type==input$type)
+        }
+      }
     return(df)
   })
+
   
   
-  output$dy_menuX <- renderMenu({
-    menu_list <- list(
-      menuItem("Add Menu Items", tabName = "main", selected = TRUE),
-      menu_vals$menu_list)
-    sidebarMenu(.list = menu_list)
-  })
-  
-  output$dy_menu <- renderMenu({  
+  output$dy_menu <- renderMenu({ 
       sidebarMenu(id="tabs",
+      
       menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker")),
-      uiOutput("selectLan"),
-      menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
-      menuItem("Status", tabName = "status", icon = icon("bar-chart")),
-      menuItem("Download", tabName = "download", icon = icon("file")))
+        menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
+        menuItem("Status", tabName = "status", icon = icon("bar-chart")),
+        menuItem("Download", tabName = "download", icon = icon("file")))
+      #if(datacount()>0){        },
+      
   })
-  
   
   output$dtwb = DT::renderDataTable({
     df <- wb_list()
@@ -68,35 +155,51 @@ shinyServer(function(input, output, session) {
     df
   }, selection = 'single', rownames= F,options = list(lengthMenu = c(5, 10, 20, 50), pageLength = 5))
   
-  output$selectLan <- renderUI({
-    tagList(selectInput(
-      "lan",
-      "Län:",
-      choices = lan_list(),
-      multiple = FALSE
-    ))
-    })
+ 
+  output$IndicatorsTitle<-renderText({
+    "Select Indicators"
+  })
   
-  observeEvent(input$dtwb_rows_selected, {
+    
+  output$SelectedWB<-renderText({
     if (length(input$dtwb_rows_selected) > 0) {
-    n<-input$dtwb_rows_selected
-    df<-wb_list()
-    wbidselect<-df[n,"WB_ID"]
-    wbnameselect<-df[n,"Name"]
-    
-    db <- dbConnect(SQLite(), dbname=dbpath)
-    sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",wbidselect,"')")
-    nrows <- dbGetQuery(db, sql)
-    dbDisconnect(db)
-    
-    values$datacount<-nrows
-    values$WBinfo <- paste0(wbidselect," ",wbnameselect," (n=",nrows,")")
-    cat(paste0("WB selected: ",n," ",wbidselect," nrows=",nrows,"\n"))
+      n<-input$dtwb_rows_selected
+      df<-wb_list()
+      wbidselect<-df[n,"WB_ID"]
+      wbnameselect<-df[n,"Name"]
+      titletext<-paste0(wbidselect," - ",wbnameselect)
+    }else{
+      titletext<-""
     }
-    })
+    titletext
+  })
+  
+  output$SelectedType<-renderText({
+    if (length(input$dtwb_rows_selected) > 0) {
+      n<-input$dtwb_rows_selected
+      df<-wb_list()
+      wbtypeselect<-df[n,"TypeName"]
+      titletext<-paste0("Type: ",wbtypeselect)
+    }else{
+      titletext<-""
+    }   
     
+  })
   
   output$wb_info<-renderText({
+    if (length(input$dtwb_rows_selected) > 0) {
+      n<-input$dtwb_rows_selected
+         df<-wb_list()
+         wbidselect<-df[n,"WB_ID"]
+         wbnameselect<-df[n,"Name"]
+           db <- dbConnect(SQLite(), dbname=dbpath)
+           sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",wbidselect,"')")
+           nrows <- dbGetQuery(db, sql)
+           dbDisconnect(db)
+         values$WBinfo <- paste0(wbidselect," ",wbnameselect," (data count = ",nrows,")")
+    }else{
+      values$WBinfo<-""
+    }
     if(typeof(values$WBinfo)!="character"){
       "none selected"
     }else{
@@ -108,6 +211,12 @@ shinyServer(function(input, output, session) {
     }
   }
   )
+
+  wbselected <- reactive({
+    n<-input$dtwb_rows_selected
+    df<-wb_list()
+    df[n,"WB_ID"]
+  })
   
   datacount <- reactive({
     n<-input$dtwb_rows_selected
@@ -117,44 +226,88 @@ shinyServer(function(input, output, session) {
     sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",s,"')")
     nrows <- dbGetQuery(db, sql)
     dbDisconnect(db)
-    cat(paste0("datarows=",nrows,"\n"))
     return(nrows)
   })
  
-  output$dataButton <- renderUI({
+  output$indicatorButton <- renderUI({
     if (datacount() > 0) {
-      buttontext <-"Get data"
-      tagList(actionButton("dataButton", buttontext))
+      buttontext <-"Select Indicators"
+      tagList(actionButton("indicatorButton", buttontext))
     }
-  })  
-  
-  observeEvent(input$dataButton, {
-    n <- datacount()
-    output$nrows <- renderUI({
-      tagList(p(renderText(
-        paste0("Selected: ", n, " rows of data.")
-      )))
-    })
-    updateTabItems(session, "tabs", "indicators")
-    #updateNavbarPage(session, "inTabset", selected = "Assessment")
   })
-  # observeEvent(input$lan, {
-    #     cat(paste0("Selected län: ",input$lan,"\n"))
-    #   })
   
+  # ------------------------ indicator selection -----------------------------------------------
+  
+  Choices<-c("CoastChlaEQR",
+             "CoastBiovolEQR",
+             "CoastTNsummerEQR",
+             "CoastTNwinterEQR",
+             "CoastTPsummerEQR",
+             "CoastTPwinterEQR",
+             "CoastDINwinterEQR",
+             "CoastDIPwinterEQR",
+             "CoastSecchiEQR",
+             "CoastBQI",
+             "CoastMSMDI",
+             "CoastOxygen")
+  
+   output$IndicatorsTitle<-renderText({
+    "Select Indicators"
+  })
  
-  dfind<-ReadIndicatorType()
+  observeEvent(input$indicatorButton, {
+    n <- datacount()
+    updateTabItems(session, "tabs", "indicators")
+    
+    # Get the info on the status for the indicators
+    db <- dbConnect(SQLite(), dbname=dbpath)
+    sql<-paste0("SELECT * FROM resAvg WHERE WB ='",wbselected(),"'")
+    df <- dbGetQuery(db, sql)
+    typeSelect <- df$Type[1]
+    sql<-paste0("SELECT * FROM resAvg WHERE Type ='",typeSelect,"'")
+    dftype <- dbGetQuery(db, sql)
+    dbDisconnect(db)
+    df <- df %>% select(Indicator,Period,Code)
+    df2 <- data.frame(Choices,stringsAsFactors=F) 
+    df2$X<-1
+    dfperiod$X<-1
+    df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-X)
+    names(df2) = c("Indicator","Period")
+    df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
+      mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
+      spread(key="Period",value="Code")
+      
+    values$df_ind_status <- df
+    values$df_ind_type <-dftype
+    
+    #output$dtind = DT::renderDataTable({
+    #  df
+    #},selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
+    #options=list())
+    
+    
+  })
   
-  dbpath<-"data/ekostat.db"
+  output$dtind = DT::renderDataTable({
+    values$df_ind_status
+  },selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
   
-  db <- dbConnect(SQLite(), dbname=dbpath)
-  wb <- dbGetQuery(db, "SELECT * FROM WB")
-  wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
-  DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
-  wb$DistrictID<-factor(wb$DistrictID, levels=DistrictList)
-  dbDisconnect(db)
+  output$dtindtype = DT::renderDataTable({
+    values$df_ind_stns
+  },selection='single',rownames=F,options=list(pageLength=999,dom = 't'))
   
-  values <- reactiveValues(resMC = data.frame())
+  observeEvent(input$dtind_rows_selected, {
+    df <- values$df_ind_status
+    indicator <- df[input$dtind_rows_selected,"Indicator"]
+    cat(paste0(indicator,"\n"))
+    values$df_ind_stns <- values$df_ind_type  %>% 
+      filter(Indicator==indicator,Code==0) %>%
+      select(WB,Period)
+  })
+ 
+  
+  
+ #------------------------------------------------------------------
   
   district_list <- reactive({
     sort(unique(wb$DistrictID))
@@ -206,19 +359,9 @@ shinyServer(function(input, output, session) {
     )
   })  
   
+  # data frame matching indicators with results from data
   
-  datacount2 <- reactive({
-    
-    db <- dbConnect(SQLite(), dbname=dbpath)
-    periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
-    wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
-    
-    sql<-paste0("SELECT COUNT(*) FROM data WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
-    nrows <- dbGetQuery(db, sql)
-    dbDisconnect(db)
-    
-    return(nrows)
-  })
+  
 
   #Check box with list of available indicators
   output$chkIndicators <- renderUI({
