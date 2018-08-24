@@ -22,8 +22,10 @@ shinyUI(
                          uiOutput("selectWaterType")),
                   column(2,
                          uiOutput("selectLan")),
-                  column(4,
-                         uiOutput("selectType"))
+                  column(2,
+                         uiOutput("selectType")),
+                  column(2,
+                         uiOutput("selectPeriod"))
                 ),
                 fluidRow(column(10, offset = 1,
                   DT::dataTableOutput("dtwb")
@@ -50,7 +52,9 @@ shinyUI(
         
         # tab content
         tabItem(tabName = "status",
-                h3("Status")
+                h3("Status"),
+                uiOutput("chkIndicators")
+                
         )
         
       )

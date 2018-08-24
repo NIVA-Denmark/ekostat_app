@@ -79,7 +79,10 @@ shinyServer(function(input, output, session) {
   
   
   values <- reactiveValues(resMC = data.frame())
-  
+  values$wbselected <- ""
+  values$wbselectedname <- ""
+  values$typeselected <- ""
+  values$typeselectedname <- ""
   
   wb <- readdb(dbpath, "SELECT * FROM WB")
   wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
@@ -150,7 +153,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$dtwb = DT::renderDataTable({
-    df <- wb_list()
+    df <- wb_list() %>% select(Lan_ID,Lan_name,WB_ID,Name,District,TypeName)
     names(df)<-c("Län ID","Län", "WB ID", "WB Name", "District", "Type")
     df
   }, selection = 'single', rownames= F,options = list(lengthMenu = c(5, 10, 20, 50), pageLength = 5))
@@ -162,38 +165,31 @@ shinyServer(function(input, output, session) {
   
     
   output$SelectedWB<-renderText({
-    if (length(input$dtwb_rows_selected) > 0) {
-      n<-input$dtwb_rows_selected
-      df<-wb_list()
-      wbidselect<-df[n,"WB_ID"]
-      wbnameselect<-df[n,"Name"]
-      titletext<-paste0(wbidselect," - ",wbnameselect)
-    }else{
+    if(values$wbselected=="") {
       titletext<-""
+    }else{
+      titletext<-paste0(values$wbselected," - ",values$wbselectedname)
     }
     titletext
   })
   
   output$SelectedType<-renderText({
-    if (length(input$dtwb_rows_selected) > 0) {
-      n<-input$dtwb_rows_selected
-      df<-wb_list()
-      wbtypeselect<-df[n,"TypeName"]
-      titletext<-paste0("Type: ",wbtypeselect)
-    }else{
+    if(values$typeselectedname==""){
       titletext<-""
+    }else{
+      titletext<-paste0("Type: ",values$typeselectedname)
     }   
-    
   })
   
   output$wb_info<-renderText({
+    periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
     if (length(input$dtwb_rows_selected) > 0) {
       n<-input$dtwb_rows_selected
          df<-wb_list()
          wbidselect<-df[n,"WB_ID"]
          wbnameselect<-df[n,"Name"]
            db <- dbConnect(SQLite(), dbname=dbpath)
-           sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",wbidselect,"')")
+           sql<-paste0("SELECT COUNT(*) FROM data WHERE period IN (",periodlist,") AND  WB IN ('",wbidselect,"')")
            nrows <- dbGetQuery(db, sql)
            dbDisconnect(db)
          values$WBinfo <- paste0(wbidselect," ",wbnameselect," (data count = ",nrows,")")
@@ -212,29 +208,49 @@ shinyServer(function(input, output, session) {
   }
   )
 
-  wbselected <- reactive({
-    n<-input$dtwb_rows_selected
-    df<-wb_list()
-    df[n,"WB_ID"]
+  period_list <- function(){
+    c("2004-2009","2010-2015")
+  }
+  
+#  period_list <- reactive({
+#    #period<-c("2004-2009","2010-2015","2016-2021")
+#    period<-
+#    res <- period 
+#    return(res)
+#  })
+  
+  
+  output$selectPeriod <- renderUI({
+    tagList(selectInput(
+      "period",
+      "Select Period(s)",
+      choices = period_list(),
+      selected= period_list(),
+      multiple = TRUE
+    ))
   })
   
+  
   datacount <- reactive({
+    periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
     n<-input$dtwb_rows_selected
     df<-wb_list()
     s<-df[n,"WB_ID"]
     db <- dbConnect(SQLite(), dbname=dbpath)
-    sql<-paste0("SELECT COUNT(*) FROM data WHERE WB IN ('",s,"')")
+    sql<-paste0("SELECT COUNT(*) FROM data WHERE period IN (",periodlist,") AND WB IN ('",s,"')")
     nrows <- dbGetQuery(db, sql)
     dbDisconnect(db)
     return(nrows)
   })
  
   output$indicatorButton <- renderUI({
-    if (datacount() > 0) {
+    if (length(input$dtwb_rows_selected) > 0) {
+      #if (datacount() > 0) {
       buttontext <-"Select Indicators"
       tagList(actionButton("indicatorButton", buttontext))
     }
   })
+  
   
   # ------------------------ indicator selection -----------------------------------------------
   
@@ -259,24 +275,37 @@ shinyServer(function(input, output, session) {
     n <- datacount()
     updateTabItems(session, "tabs", "indicators")
     
-    # Get the info on the status for the indicators
+    output$dfindtype <-DT::renderDataTable({
+      dt<-data.frame() %>% 
+        datatable()
+    })
+    
+    values$wbselected<-wb_list()[input$dtwb_rows_selected,"WB_ID"]
+    values$wbselectedname<-wb_list()[input$dtwb_rows_selected,"Name"]
+    values$typeselected<-wb_list()[input$dtwb_rows_selected,"Type"]
+    values$typeselectedname<-wb_list()[input$dtwb_rows_selected,"TypeName"]
+    
+    cat(paste0("type=",values$typeselected,"\n"))
+        # Get the info on the status for the indicators
     db <- dbConnect(SQLite(), dbname=dbpath)
-    sql<-paste0("SELECT * FROM resAvg WHERE WB ='",wbselected(),"'")
+    sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
     df <- dbGetQuery(db, sql)
-    typeSelect <- df$Type[1]
-    sql<-paste0("SELECT * FROM resAvg WHERE Type ='",typeSelect,"'")
+    #typeSelect <- df$Type[1]
+    sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"'")
     dftype <- dbGetQuery(db, sql)
     dbDisconnect(db)
     df <- df %>% select(Indicator,Period,Code)
     df2 <- data.frame(Choices,stringsAsFactors=F) 
     df2$X<-1
+    dfperiod<-data.frame(input$period,stringsAsFactors=F)
     dfperiod$X<-1
     df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-X)
     names(df2) = c("Indicator","Period")
+ 
     df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
       mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
       spread(key="Period",value="Code")
-      
+
     values$df_ind_status <- df
     values$df_ind_type <-dftype
     
@@ -302,7 +331,8 @@ shinyServer(function(input, output, session) {
     cat(paste0(indicator,"\n"))
     values$df_ind_stns <- values$df_ind_type  %>% 
       filter(Indicator==indicator,Code==0) %>%
-      select(WB,Period)
+      filter(Period %in% input$period) %>%
+      select(WB,Period,Type)
   })
  
   
@@ -329,23 +359,7 @@ shinyServer(function(input, output, session) {
     res <- sort(unique(dfwb$WB))
     return(res)
   })
-  
-  period_list <- reactive({
-    #period<-c("2004-2009","2010-2015","2016-2021")
-    period<-c("2004-2009","2010-2015")
-    res <- period 
-    return(res)
-  })
-  
-  
-  output$selectPeriod <- renderUI({
-    tagList(selectInput(
-      "period",
-      "Select Period(s)",
-      choices = period_list(),
-      multiple = TRUE
-    ))
-  })
+ 
   
   output$selectWaterBodies <- renderUI({
     tagList(
