@@ -1,3 +1,6 @@
+library(tidyr)
+library(RSQLite)
+library(dplyr)
 
 values<-list()
 
@@ -26,7 +29,7 @@ df <- dbGetQuery(db, sql)
 sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"'")
 dftype <- dbGetQuery(db, sql)
 dbDisconnect(db)
-df <- df %>% select(Indicator,Period,Code)
+df <- df %>% select(Indicator,Period,Code) #IndSubtype,
 df2 <- data.frame(Choices,stringsAsFactors=F) 
 df2$X<-1
 dfperiod<-data.frame(period,stringsAsFactors=F)
@@ -42,3 +45,40 @@ values$df_ind_status <- df
 values$df_ind_type <-dftype
 
 
+db <- dbConnect(SQLite(), dbname=dbpath)
+sql<-paste0("SELECT * FROM resAvg WHERE WB in ('SE584870-174310','SE580325-113500')")
+df <- dbGetQuery(db, sql)
+dbDisconnect(db)
+# 
+# oksubtypes <- df %>% distinct(Indicator,IndSubtype,Code) %>% 
+#   filter(Code>-10,IndSubtype!="")
+# 
+# subtypes <- df %>% distinct(Indicator,IndSubtype) %>%
+#   filter(IndSubtype!="")
+# 
+# subtypes <- subtypes %>% 
+#   left_join(oksubtypes,by=c("Indicator","IndSubtype")) %>%
+#   filter(!is.na(Code)) %>%
+#   select(-Code)
+#   
+
+CleanSubTypes <- function(df){
+  oksubtypes <- df %>% distinct(WB,Indicator,IndSubtype,Code) %>% 
+    filter(Code>-10,IndSubtype!="")
+  
+  subtypes <- df %>% distinct(WB,Indicator,IndSubtype) %>%
+    filter(IndSubtype!="")
+  
+  subtypes <- subtypes %>% 
+    left_join(oksubtypes,by=c("WB","Indicator","IndSubtype")) %>%
+    filter(is.na(Code)) %>%
+    select(-Code) %>%
+    mutate(drop=1)
+
+  df <- df %>% left_join(subtypes,by=c("WB","Indicator","IndSubtype")) %>%
+    filter(is.na(drop)) %>%
+    select(-drop)
+  return(df)
+}
+
+df2<-CleanSubTypes(df)

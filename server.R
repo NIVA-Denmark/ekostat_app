@@ -23,6 +23,26 @@ shinyServer(function(input, output, session) {
     return(df)
   }  
   
+  # function to clean duplicate Indicator Subtypes
+  CleanSubTypes <- function(df){
+    oksubtypes <- df %>% distinct(WB,Indicator,IndSubtype,Code) %>% 
+      filter(Code>-10,IndSubtype!="")
+    
+    subtypes <- df %>% distinct(WB,Indicator,IndSubtype) %>%
+      filter(IndSubtype!="")
+    
+    subtypes <- subtypes %>% 
+      left_join(oksubtypes,by=c("WB","Indicator","IndSubtype")) %>%
+      filter(is.na(Code)) %>%
+      select(-Code) %>%
+      mutate(drop=1)
+    
+    df <- df %>% left_join(subtypes,by=c("WB","Indicator","IndSubtype")) %>%
+      filter(is.na(drop)) %>%
+      select(-drop)
+    return(df)
+  }
+  
   # Read list of indicators
   dfind<-ReadIndicatorType()
   sql<-paste0()
@@ -290,9 +310,11 @@ shinyServer(function(input, output, session) {
     db <- dbConnect(SQLite(), dbname=dbpath)
     sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
     df <- dbGetQuery(db, sql)
+    df<-CleanSubTypes(df)
     #typeSelect <- df$Type[1]
     sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"'")
     dftype <- dbGetQuery(db, sql)
+    dftype<-CleanSubTypes(dftype)
     dbDisconnect(db)
     df <- df %>% select(Indicator,Period,Code)
     df2 <- data.frame(Choices,stringsAsFactors=F) 
