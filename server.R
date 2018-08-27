@@ -7,6 +7,7 @@ library(lubridate)
 library(prodlim)
 library(sparkline)
 library(RSQLite)
+library(data.table)
 
 source("ReadIndicatorType.R")
 source("classoutputtable.R")
@@ -202,6 +203,7 @@ shinyServer(function(input, output, session) {
       )
     })
   
+
   
   output$dtwb = DT::renderDataTable({
     df <- wb_list() %>% select(Lan_ID,Lan_name,WB_ID,Name,District,TypeName)
@@ -354,10 +356,8 @@ shinyServer(function(input, output, session) {
          datatable()
      })
 
-
      
-    #cat(paste0("type=",values$typeselected,"\n"))
-        # Get the info on the status for the indicators
+       # Get the info on the status for the indicators
     db <- dbConnect(SQLite(), dbname=dbpath)
     sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
     df <- dbGetQuery(db, sql)
@@ -369,6 +369,7 @@ shinyServer(function(input, output, session) {
     dbDisconnect(db)
     
     dftype <- dftype %>% left_join(select(dfwb_lan,WB_ID,Name),by=c("WB"="WB_ID"))
+
     df <- df %>% select(Indicator,Period,Code)
     df2 <- data.frame(IndList,stringsAsFactors=F) 
     df2$X<-1
@@ -382,15 +383,16 @@ shinyServer(function(input, output, session) {
       mutate(Data=ifelse(Code=='0',"YES","NO")) %>%
       select(-Code) %>%
       # spread(key="Period",value="Code")
-      spread(key="Period",value="Data")
-      
+      spread(key="Period",value="Data") %>%
+      left_join(select(dfind,Indicator,IndicatorDescription),by="Indicator")
+    num_col<-ncol(df)
+    cat(paste0("ncol=",num_col,"\n"))
+    # reorder_columns
+    df<-df[,c(1,n,seq(2,n-1,1))]
+    
     values$df_ind_status <- df
     values$df_ind_type <-dftype
-    
-    #output$dtind = DT::renderDataTable({
-    #  df
-    #},selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
-    #options=list())
+
      } else{
        #no indicators selected
        showModal(modalDialog(
@@ -401,10 +403,47 @@ shinyServer(function(input, output, session) {
     
   })
   
-  output$dtind = DT::renderDataTable({
-    values$df_ind_status
-  },selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
-  
+ 
+  #  output$dtind = DT::renderDataTable({
+  #    DT=values$df_ind_status
+  #    DT[["Actions"]]<-
+  #      paste0('
+  #             <div class="btn-group" role="group" aria-label="Basic example">
+  #             <button type="button" class="btn btn-secondary modify" id="modify_',1:nrow(values$df_ind_status),'">Modify</button>
+  #             </div>
+  #             ')
+  #    datatable(DT,
+  #              escape=F,selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
+  # })
+   
+   
+   
+   modal_modify=modalDialog(
+     fluidPage(
+       h3(strong("Indicator"),align="center"),
+       p("Missing functionality",colour="red"),
+       hr(),
+       dataTableOutput('row_modif'),
+       actionButton("save_changes","Save changes")
+     ),
+     size="l"
+   )  
+   
+   # observeEvent(input$lastClick,
+   #              {
+   #                if (input$lastClickId%like%"modify")
+   #                {
+   #                  showModal(modal_modify)
+   #                }
+   #              }
+   # )
+ 
+   output$dtind = DT::renderDataTable({
+     df<-values$df_ind_status
+     num_col<-ncol(df)
+     df[,2:num_col]
+   },selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
+    
   output$dtindtype = DT::renderDataTable({
     values$df_ind_stns
   },selection='single',rownames=F,options=list(pageLength=999,dom = 't'))
@@ -417,7 +456,10 @@ shinyServer(function(input, output, session) {
     values$df_ind_stns <- values$df_ind_type  %>% 
       filter(Indicator==indicator,Code==0) %>%
       filter(Period %in% input$period) %>%
-      select(WB,Name,Period)
+      select(WB,Name) %>%
+      group_by(WB,Name) %>%
+      summarise() %>%
+      ungroup()
   })
  
   
@@ -547,7 +589,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$chkClassBnds, {
     if (nrow(values$resMC) > 0) {
-      str(paste0("dfMC updated n=", nrow(values$resMC)))
+      #str(paste0("dfMC updated n=", nrow(values$resMC)))
       if (input$chkClassBnds == TRUE) {
         grplist <- c(
           "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator","IndSubtype",

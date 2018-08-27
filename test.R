@@ -100,3 +100,21 @@ CleanSubTypes <- function(df){
 }
 
 df2<-CleanSubTypes(df)
+
+
+# -------------------------------------------------
+output$indClick <- renderUI({
+  cat("update click\n")
+  df<-values$df_ind_status
+  num_tracks<-nrow(df)
+  lapply(1:num_tracks, function(i) {
+    
+    div(class="fluidRow",
+        div(class="column",style=list("padding-left: 3px;"),
+            paste0(df[i,1]),label="Indicator"
+        ),
+        div(class="column",style=list("padding-left: 3px;"),
+            paste0(df[i,2]),label="Col2"
+        )
+    )})
+})

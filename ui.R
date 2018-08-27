@@ -9,10 +9,15 @@ ui <-
 shinyUI(
   
   dashboardPage(skin = "black",title="WATERS Status Assessment Tool",
-    dashboardHeader(title = tags$a(tags$img(src='waters_2.gif',height='20',width='204'))),
+    dashboardHeader(title = tags$a(tags$img(src='waters_2.gif',height='20',width='204'))
+                    ),
     dashboardSidebar(
       sidebarMenuOutput(outputId = "dy_menu")),
     dashboardBody(
+      tags$script("$(document).on('click', '#dtind button', function () {
+                    Shiny.onInputChange('lastClickId',this.id);
+                    Shiny.onInputChange('lastClick', Math.random())
+  });"),
       tabItems(
   # tab content
         tabItem(tabName = "waterbody",
@@ -25,7 +30,9 @@ shinyUI(
                   column(2,
                          uiOutput("selectType")),
                   column(3,
-                         uiOutput("selectPeriod"))
+                         uiOutput("selectPeriod")),
+                  column(3,
+                         uiOutput("indicatorButton"))
                 ),
                 fluidRow(column(10, offset = 1,
                                 #box(
@@ -38,33 +45,32 @@ shinyUI(
                      h3(textOutput("wb_info")))),
             fluidRow(
               column(2,#offset=10,
-               uiOutput("indicatorButton")))
+               ""))
             
           ),
   
         # tab content
         tabItem(tabName = "indicators",
                 h3("Select Indicators"),
-                uiOutput("selectPressure"),
-                uiOutput("chkIndicators"),
-                uiOutput("dataButton")),
+                fluidRow(column(9,uiOutput("selectPressure")),
+                         column(3,uiOutput("dataButton"))),
+                uiOutput("chkIndicators")),
   
         # tab content
         tabItem(tabName = "data",
                 h3(textOutput("DataTitle")),
                 h3(textOutput("SelectedWB")),
-                textOutput("SelectedType"),
-                fluidRow(column(4, offset = 1,"Data available"),
-                         column(4,"Same type")),
+                fluidRow(column(9,textOutput("SelectedType")),
+                         column(3,uiOutput("goButton"))),
+                fluidRow(column(5, offset = 1,h4("Data available")),
+                         column(4,h4("WBs of same type with data"))),
                 
           fluidRow(column(4, offset = 1,
             DT::dataTableOutput("dtind")
           ),
           column(4,
                 DT::dataTableOutput("dtindtype")
-          )),
-            uiOutput("goButton")
-                    ),
+          ))),
         
         # tab content
         tabItem(tabName = "status",
