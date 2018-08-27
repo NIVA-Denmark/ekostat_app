@@ -37,7 +37,13 @@ shinyUI(
   
         # tab content
         tabItem(tabName = "indicators",
-                h3(textOutput("IndicatorsTitle")),
+                h3("Select Indicators"),
+                uiOutput("chkIndicators"),
+                uiOutput("dataButton")),
+  
+        # tab content
+        tabItem(tabName = "data",
+                h3(textOutput("DataTitle")),
                 h3(textOutput("SelectedWB")),
                 textOutput("SelectedType"),
           fluidRow(column(4, offset = 1,
@@ -49,11 +55,10 @@ shinyUI(
           column(1,uiOutput("goButton"))
                     )),
         
-        
         # tab content
         tabItem(tabName = "status",
-                h3("Status"),
-                uiOutput("chkIndicators")
+                h3("Status")#,
+                #uiOutput("chkIndicators")
                 
         )
         

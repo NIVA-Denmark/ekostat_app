@@ -166,8 +166,9 @@ shinyServer(function(input, output, session) {
       
       menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker")),
         menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
-        menuItem("Status", tabName = "status", icon = icon("bar-chart")),
-        menuItem("Download", tabName = "download", icon = icon("file")))
+      menuItem("Data", tabName = "data", icon = icon("database")),
+      menuItem("Status", tabName = "status", icon = icon("bar-chart")),
+      menuItem("Download", tabName = "download", icon = icon("file")))
       #if(datacount()>0){        },
       
   })
@@ -271,6 +272,15 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  output$dataButton <- renderUI({
+    if (length(input$dtwb_rows_selected) > 0) {
+      #if (datacount() > 0) {
+      buttontext <-"Data Status"
+      tagList(actionButton("dataButton", buttontext))
+    }
+  })
+  
+  
   
   # ------------------------ indicator selection -----------------------------------------------
   
@@ -316,6 +326,8 @@ shinyServer(function(input, output, session) {
     dftype <- dbGetQuery(db, sql)
     dftype<-CleanSubTypes(dftype)
     dbDisconnect(db)
+    
+    dftype <- dftype %>% left_join(select(dfwb_lan,WB_ID,Name),by=c("WB"="WB_ID"))
     df <- df %>% select(Indicator,Period,Code)
     df2 <- data.frame(Choices,stringsAsFactors=F) 
     df2$X<-1
@@ -326,8 +338,11 @@ shinyServer(function(input, output, session) {
  
     df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
       mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
-      spread(key="Period",value="Code")
-
+      mutate(Data=ifelse(Code=='0',"YES","NO")) %>%
+      select(-Code) %>%
+      # spread(key="Period",value="Code")
+      spread(key="Period",value="Data")
+      
     values$df_ind_status <- df
     values$df_ind_type <-dftype
     
@@ -350,11 +365,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$dtind_rows_selected, {
     df <- values$df_ind_status
     indicator <- df[input$dtind_rows_selected,"Indicator"]
+    datastatus <- df[input$dtind_rows_selected,"Data"]
     cat(paste0(indicator,"\n"))
     values$df_ind_stns <- values$df_ind_type  %>% 
       filter(Indicator==indicator,Code==0) %>%
       filter(Period %in% input$period) %>%
-      select(WB,Period,Type)
+      select(WB,Name,Period)
   })
  
   

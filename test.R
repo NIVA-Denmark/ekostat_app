@@ -2,6 +2,14 @@ library(tidyr)
 library(RSQLite)
 library(dplyr)
 
+
+source("ReadIndicatorType.R")
+source("classoutputtable.R")
+dfind<-ReadIndicatorType()
+
+#----------------------------------------------------------------
+#----------------------------------------------------------------
+#----------------------------------------------------------------
 values<-list()
 
 dbpath<-"data/ekostat.db"
