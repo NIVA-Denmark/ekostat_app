@@ -1,24 +1,24 @@
 Water_type	QEtype	QualityElement	QualitySubelement	Indicator	Parameter	Measurement	IndicatorDescription	Nutrient loading	Organic loading	Acidification	Harmful substances	Hydrological changes	Morphological changes	General pressure
-Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastChla	chla	Chlorophyll a	Chlorophyll a	X						
+Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastChla	chla	Chlorophyll a	Chlorophyll a							
 Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastChlaEQR	chla	Chlorophyll a	Chlorophyll a (EQR)	X						
-Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastBiovol	biovol	Phytoplankton biovolume	Phytoplankton biovolume	X						
+Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastBiovol	biovol	Phytoplankton biovolume	Phytoplankton biovolume							
 Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastBiovolEQR	biovol	Phytoplankton biovolume	Phytoplankton biovolume (EQR)	X						
 Coastal	Biological	Benthic fauna	Composition and diversity	CoastBQI	BQI	BQI	Benthic Quality Index (BQI)	X	X					
 Coastal	Biological	Benthic vegetation	Composition and abundance	CoastMSMDI	MSMDI	MSMDI	Multi-Species Maximum Depth Index (MSMDI)	X						
-Coastal	Supporting	Water transparency	Secchi depth	CoastSecchi	secchi	Secchi depth	Secchi Depth	X	X					
+Coastal	Supporting	Water transparency	Secchi depth	CoastSecchi	secchi	Secchi depth	Secchi Depth							
 Coastal	Supporting	Water transparency	Secchi depth	CoastSecchiEQR	secchi	Secchi depth	Secchi Depth (EQR)	X	X					
-Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinter	DIN	Dissolved inorganic Nitrogen	Winter DIN concentration	X						
-Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinterEQR	TN	Dissolved inorganic Nitrogen	Summer TN concentration	X						
-Coastal	Supporting	Nutrients	Nitrogen	CoastTNsummer	TN	Total Nitrogen	Winter TN concentration	X						
-Coastal	Supporting	Nutrients	Nitrogen	CoastTNsummerEQR	DIP	Total Nitrogen	Winter DIP	X						
-Coastal	Supporting	Nutrients	Nitrogen	CoastTNwinter	TP	Total Nitrogen	Summer TP	X						
-Coastal	Supporting	Nutrients	Nitrogen	CoastTNwinterEQR	TP	Total Nitrogen	Winter TP	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastDIPwinter	DIN	Dissolved inorganic Phosphorus	Winter DIN concentration (EQR)	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastDIPwinterEQR	TN	Dissolved inorganic Phosphorus	Summer TN concentration (EQR)	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastTPsummer	TN	Total Phosphorus	Winter TN concentration (EQR)	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastTPsummerEQR	DIP	Total Phosphorus	Winter DIP (EQR)	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinter	TP	Total Phosphorus	Summer TP (EQR)	X						
-Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinterEQR	TP	Total Phosphorus	Winter TP (EQR)	X						
+Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinter	DIN	Dissolved inorganic Nitrogen	Winter DIN conc.							
+Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinterEQR	DIN	Dissolved inorganic Nitrogen	Winter DIN conc. (EQR)	X						
+Coastal	Supporting	Nutrients	Nitrogen	CoastTNsummer	TN	Total Nitrogen	Summer TN conc.							
+Coastal	Supporting	Nutrients	Nitrogen	CoastTNsummerEQR	TN	Total Nitrogen	Summer TN conc. (EQR)	X						
+Coastal	Supporting	Nutrients	Nitrogen	CoastTNwinter	TP	Total Nitrogen	Winter TN conc.							
+Coastal	Supporting	Nutrients	Nitrogen	CoastTNwinterEQR	TP	Total Nitrogen	Winter TN conc. (EQR)	X						
+Coastal	Supporting	Nutrients	Phosphorus	CoastDIPwinter	DIP	Dissolved inorganic Phosphorus	Winter DIP conc.							
+Coastal	Supporting	Nutrients	Phosphorus	CoastDIPwinterEQR	DIP	Dissolved inorganic Phosphorus	Winter DIP conc. (EQR)	X						
+Coastal	Supporting	Nutrients	Phosphorus	CoastTPsummer	TP	Total Phosphorus	Summer TP conc.							
+Coastal	Supporting	Nutrients	Phosphorus	CoastTPsummerEQR	TP	Total Phosphorus	Summer TP conc. (EQR)	X						
+Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinter	TP	Total Phosphorus	Winter TP conc.							
+Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinterEQR	TP	Total Phosphorus	Winter TP conc. (EQR)	X						
 Coastal	Supporting	Oxygen	Oxygen	CoastOxygen	O2	Oxygen	Oxygen Concentration	X	X					X
 Lakes	Biological	Phytoplankton	Phytoplankton biomass	LakeBiovol		Phytoplankton biovolume		X						
 Lakes	Biological	Phytoplankton	Phytoplankton biomass	LakeBiovolEQR		Phytoplankton biovolume		X						
@@ -55,3 +55,4 @@ Rivers	Biological	Fish	Composition and abundance	RiverVIXh		VIXh		X		X		X	X
 Rivers	Supporting	Nutrients	Nitrogen	RiverTNsummer		Total Nitrogen		X						
 Rivers	Supporting	Nutrients	Phosphorus	RiverTPsummer		Total Phosphorus		X						
 Rivers	Supporting	Acidification	pH	RiverpHchange		pH				X				
+XXXXXX	XXXXXXXX	XXXXXXXXXX	XXXXXXXX	XXXXXXXXX	XX	XXXXXXXXXX		X	X	X	X	X	X	X

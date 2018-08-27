@@ -24,20 +24,28 @@ shinyUI(
                          uiOutput("selectLan")),
                   column(2,
                          uiOutput("selectType")),
-                  column(2,
+                  column(3,
                          uiOutput("selectPeriod"))
                 ),
                 fluidRow(column(10, offset = 1,
-                  DT::dataTableOutput("dtwb")
+                                #box(
+                                #  title = "Title 1", width=10,solidHeader = TRUE, status = "primary",
+                                  DT::dataTableOutput("dtwb")
+                                #),
             )),
-            h3(textOutput("wb_info"),
-               uiOutput("indicatorButton")
-            )
+            fluidRow(
+              column(10,
+                     h3(textOutput("wb_info")))),
+            fluidRow(
+              column(2,#offset=10,
+               uiOutput("indicatorButton")))
+            
           ),
   
         # tab content
         tabItem(tabName = "indicators",
                 h3("Select Indicators"),
+                uiOutput("selectPressure"),
                 uiOutput("chkIndicators"),
                 uiOutput("dataButton")),
   
@@ -46,19 +54,63 @@ shinyUI(
                 h3(textOutput("DataTitle")),
                 h3(textOutput("SelectedWB")),
                 textOutput("SelectedType"),
+                fluidRow(column(4, offset = 1,"Data available"),
+                         column(4,"Same type")),
+                
           fluidRow(column(4, offset = 1,
             DT::dataTableOutput("dtind")
           ),
           column(4,
                 DT::dataTableOutput("dtindtype")
-          ),
-          column(1,uiOutput("goButton"))
-                    )),
+          )),
+            uiOutput("goButton")
+                    ),
         
         # tab content
         tabItem(tabName = "status",
-                h3("Status")#,
-                #uiOutput("chkIndicators")
+                fluidRow(column(width=8,
+                h3(textOutput("SelectedWBStatus")),
+                textOutput("SelectedTypeStatus")
+                ),
+                column(width=4,
+                         #h3("Indicator Errors"),
+                    checkboxInput("IgnoreErr", "Ignore indicator minimum year count", value = FALSE, width = NULL),
+                    p("Check this option to include indicators which otherwise would be ignored because they don't meet the requirements for number of years with data.")
+                  )
+                ),
+                #uiOutput("chkIndicators")),
+                
+                fluidRow(column(width=3,htmlOutput("titleTable1"),DT::dataTableOutput("resTable1")),
+                         column(width=4,htmlOutput("titleTable2"),DT::dataTableOutput("resTable2")),
+                         column(width=5,htmlOutput("titleTable3"),DT::dataTableOutput("resTable3"))
+                                         ),
+                fluidRow(column(width=5,offset=7,htmlOutput("titleTable4"),DT::dataTableOutput("resTable4"))
+                ),
+                fluidRow(column(width=12,htmlOutput("titleTableInd"),
+                                DT::dataTableOutput("resTableInd"))
+                ),
+                fluidRow(column(width=6,h3(textOutput("titleTableObs")))),
+                fluidRow(column(width=6,plotOutput("plotObs")),
+                         column(width=6,DT::dataTableOutput("resTableObs"))
+                )
+                         
+
+        ),
+
+        # tab content
+        tabItem(tabName = "options",
+                h3("Options"),
+                #h3("Indicator Errors"),
+                #checkboxInput("IgnoreErr", "Ignore indicator minimum year count", value = FALSE, width = NULL),
+                #p("Check this option to include indicators which otherwise would be ignored because they don't meet the requirements for number of years with data."),
+                h3("Monte Carlo"),
+                numericInput("n",
+                             label = "Number of simulations", min=1,
+                             value = 500),
+                 p("Options for Monte Carlo simulations."),
+                h3("Indicator List"),
+                checkboxInput("chkClassBnds","Show Class Boundaries", value=FALSE, width=NULL)
+               #uiOutput("chkIndicators")
                 
         )
         

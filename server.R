@@ -58,8 +58,20 @@ shinyServer(function(input, output, session) {
     mutate(TypeNum = gsub("n",".0",Type)) %>%
     mutate(TypeNum = gsub("s",".5",TypeNum))
   dfwb_lan$TypeNum <- as.numeric(dfwb_lan$TypeNum)
+
+  dfobs <- function(wblist,periodlist){
+    sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB = '",wblist,"'")
+    df<-readdb(dbpath, sql)
+    df <- df %>% filter(typology==values$typeselected)
+    df$date<-as.Date(df$date,origin="1970-01-01")
+    return(df)
+  }
+
   
-    
+  pressure_list<-function(){
+    c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
+  }
+  
   listWaterType<- dfind %>% 
     distinct(Water_type) %>%
     rename(Water=Water_type)
@@ -75,6 +87,18 @@ shinyServer(function(input, output, session) {
       width="180px"
     ))
   })
+  
+  
+  output$selectPressure <- renderUI({
+    tagList(selectInput(
+      "pressure",
+      "Select Pressure",
+      choices = pressure_list(),
+      multiple = FALSE
+    ))
+  })
+  
+  
   
   output$selectLan <- renderUI({
     
@@ -109,8 +133,7 @@ shinyServer(function(input, output, session) {
   DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
   wb$DistrictID<-factor(wb$DistrictID, levels=DistrictList)
   
- 
-  
+
   
   lan_list <- reactive({
     Lan <- c("ALL")
@@ -125,6 +148,8 @@ shinyServer(function(input, output, session) {
   })
 
   type_list <- reactive({
+    #TO DO - include filter by water type (coastal, lake, stream) 
+    
     Type <- c("ALL")
     all <- data.frame(Type,row.names=F,stringsAsFactors=F)
     df<-dfwb_lan
@@ -160,18 +185,23 @@ shinyServer(function(input, output, session) {
   })
 
   
+      
   
   output$dy_menu <- renderMenu({ 
       sidebarMenu(id="tabs",
-      
       menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker")),
-        menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
-      menuItem("Data", tabName = "data", icon = icon("database")),
+      if(values$wbselected!=""){
+        menuItem("Indicators", tabName = "indicators", icon = icon("tasks"))
+        },
+      if(values$wbselected!=""){
+          menuItem("Data", tabName = "data", icon = icon("database"))
+        },
       menuItem("Status", tabName = "status", icon = icon("bar-chart")),
-      menuItem("Download", tabName = "download", icon = icon("file")))
-      #if(datacount()>0){        },
-      
-  })
+      #menuItem("Download", tabName = "download", icon = icon("file"))
+      menuItem("Options", tabName = "options", icon = icon("cog"))#,
+      )
+    })
+  
   
   output$dtwb = DT::renderDataTable({
     df <- wb_list() %>% select(Lan_ID,Lan_name,WB_ID,Name,District,TypeName)
@@ -187,7 +217,7 @@ shinyServer(function(input, output, session) {
     
   output$SelectedWB<-renderText({
     if(values$wbselected=="") {
-      titletext<-""
+      titletext<-"No Waterbody Selected"
     }else{
       titletext<-paste0(values$wbselected," - ",values$wbselectedname)
     }
@@ -228,17 +258,29 @@ shinyServer(function(input, output, session) {
     }
   }
   )
-
+  
+  output$SelectedWBStatus<-renderText({
+    if(values$wbselected=="") {
+      titletext<-""
+    }else{
+      titletext<-paste0("Status: ",values$wbselected," - ",values$wbselectedname)
+    }
+    titletext
+  })
+  
+  output$SelectedTypeStatus<-renderText({
+    if(values$typeselectedname==""){
+      titletext<-""
+    }else{
+      titletext<-paste0("Type: ",values$typeselectedname)
+    }   
+  })
+  
   period_list <- function(){
     c("2004-2009","2010-2015")
   }
   
-#  period_list <- reactive({
 #    #period<-c("2004-2009","2010-2015","2016-2021")
-#    period<-
-#    res <- period 
-#    return(res)
-#  })
   
   
   output$selectPeriod <- renderUI({
@@ -250,7 +292,6 @@ shinyServer(function(input, output, session) {
       multiple = TRUE
     ))
   })
-  
   
   datacount <- reactive({
     periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
@@ -271,6 +312,7 @@ shinyServer(function(input, output, session) {
       tagList(actionButton("indicatorButton", buttontext))
     }
   })
+  #,style="padding:4px; font-size:120%"
   
   output$dataButton <- renderUI({
     if (length(input$dtwb_rows_selected) > 0) {
@@ -281,41 +323,40 @@ shinyServer(function(input, output, session) {
   })
   
   
-  
   # ------------------------ indicator selection -----------------------------------------------
   
-  Choices<-c("CoastChlaEQR",
-             "CoastBiovolEQR",
-             "CoastTNsummerEQR",
-             "CoastTNwinterEQR",
-             "CoastTPsummerEQR",
-             "CoastTPwinterEQR",
-             "CoastDINwinterEQR",
-             "CoastDIPwinterEQR",
-             "CoastSecchiEQR",
-             "CoastBQI",
-             "CoastMSMDI",
-             "CoastOxygen")
   
    output$IndicatorsTitle<-renderText({
     "Select Indicators"
   })
+   
+   observeEvent(input$indicatorButton, {
+     values$wbselected<-wb_list()[input$dtwb_rows_selected,"WB_ID"]
+     values$wbselectedname<-wb_list()[input$dtwb_rows_selected,"Name"]
+     values$typeselected<-wb_list()[input$dtwb_rows_selected,"Type"]
+     values$typeselectedname<-wb_list()[input$dtwb_rows_selected,"TypeName"]
+     values$periodselected<-input$period
+     updateTabItems(session, "tabs", "indicators")
+   })
+   
  
-  observeEvent(input$indicatorButton, {
-    n <- datacount()
-    updateTabItems(session, "tabs", "indicators")
-    
-    output$dfindtype <-DT::renderDataTable({
-      dt<-data.frame() %>% 
-        datatable()
-    })
-    
-    values$wbselected<-wb_list()[input$dtwb_rows_selected,"WB_ID"]
-    values$wbselectedname<-wb_list()[input$dtwb_rows_selected,"Name"]
-    values$typeselected<-wb_list()[input$dtwb_rows_selected,"Type"]
-    values$typeselectedname<-wb_list()[input$dtwb_rows_selected,"TypeName"]
-    
-    cat(paste0("type=",values$typeselected,"\n"))
+   observeEvent(input$dataButton, {
+     
+     IndList <- input$indSelect
+     if (length(IndList) > 0) {
+     
+     
+     #n <- datacount()
+     updateTabItems(session, "tabs", "data")
+     
+     output$dfindtype <-DT::renderDataTable({
+       dt<-data.frame() %>% 
+         datatable()
+     })
+
+
+     
+    #cat(paste0("type=",values$typeselected,"\n"))
         # Get the info on the status for the indicators
     db <- dbConnect(SQLite(), dbname=dbpath)
     sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
@@ -329,9 +370,9 @@ shinyServer(function(input, output, session) {
     
     dftype <- dftype %>% left_join(select(dfwb_lan,WB_ID,Name),by=c("WB"="WB_ID"))
     df <- df %>% select(Indicator,Period,Code)
-    df2 <- data.frame(Choices,stringsAsFactors=F) 
+    df2 <- data.frame(IndList,stringsAsFactors=F) 
     df2$X<-1
-    dfperiod<-data.frame(input$period,stringsAsFactors=F)
+    dfperiod<-data.frame(values$periodselected,stringsAsFactors=F)
     dfperiod$X<-1
     df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-X)
     names(df2) = c("Indicator","Period")
@@ -350,7 +391,13 @@ shinyServer(function(input, output, session) {
     #  df
     #},selection = 'single',rownames=F,options = list(dom = 't',pageLength = 99))
     #options=list())
-    
+     } else{
+       #no indicators selected
+       showModal(modalDialog(
+         title = div(tags$b("No indicators selected", style = "color: red;")),
+         "You need to select at least one indicator!"
+       ))
+     }
     
   })
   
@@ -366,7 +413,7 @@ shinyServer(function(input, output, session) {
     df <- values$df_ind_status
     indicator <- df[input$dtind_rows_selected,"Indicator"]
     datastatus <- df[input$dtind_rows_selected,"Data"]
-    cat(paste0(indicator,"\n"))
+    #cat(paste0(indicator,"\n"))
     values$df_ind_stns <- values$df_ind_type  %>% 
       filter(Indicator==indicator,Code==0) %>%
       filter(Period %in% input$period) %>%
@@ -412,46 +459,23 @@ shinyServer(function(input, output, session) {
   })  
   
   # data frame matching indicators with results from data
-  
-  
 
   #Check box with list of available indicators
   output$chkIndicators <- renderUI({
-    if (datacount() > 0) {
-      Choices<-c("CoastChlaEQR",
-                 "CoastBiovolEQR",
-                 "CoastTNsummerEQR",
-                 "CoastTNwinterEQR",
-                 "CoastTPsummerEQR",
-                 "CoastTPwinterEQR",
-                 "CoastDINwinterEQR",
-                 "CoastDIPwinterEQR",
-                 "CoastSecchiEQR",
-                 "CoastBQI",
-                 "CoastMSMDI",
-                 "CoastOxygen") 
-      
-       sList = c("Chlorophyll a (EQR)" = "CoastChlaEQR",
-                "Phytoplankton Biovolume (EQR)" = "CoastBiovolEQR",
-                "Summer TN (EQR)" = "CoastTNsummerEQR",
-                "Winter TN (EQR)" = "CoastTNwinterEQR",
-                "Summer TP (EQR)" = "CoastTPsummerEQR",
-                "Winter TP (EQR)" = "CoastTPwinterEQR",
-                "Winter DIN (EQR)" = "CoastDINwinterEQR",
-                "Winter DIP (EQR)" = "CoastDIPwinterEQR",
-                "Secchi Depth (EQR)" = "CoastSecchiEQR",
-                "Benthic Quality Index (BQI)" = "CoastBQI",
-                "Multi Species Maximum Depth Index (MSMDI)" = "CoastMSMDI",
-                "Dissolved Oxygen (O2)" = "CoastOxygen")
-
-       
-      tagList(checkboxGroupInput("indSelect", "Indicators:",
-                                 sList, selected = Choices))
-      
-    }
+    pname<-input$pressure
+    pname<-gsub(" ",".",pname)
+    df <- dfind %>% filter(Water_type==input$waterType)
+    df <- df[df[,pname]=="X",c("Indicator","IndicatorDescription")]
+    tagList(checkboxGroupInput("indSelect", "Indicators:",
+                               choiceNames=df$IndicatorDescription,
+                               choiceValues=df$Indicator,
+                               selected=df$Indicator))
   })
+  
   output$goButton <- renderUI({
-    if (datacount() > 0) {
+    if(values$wbselected==""){
+      ""
+    }else{
       tagList(actionButton("goButton", "Calculate Status"))
     }
   })
@@ -466,46 +490,32 @@ shinyServer(function(input, output, session) {
     return(sType[[1]])
   })
   
-  df.select <- reactive({
-    db <- dbConnect(SQLite(), dbname=dbpath)
-    periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
-    wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
-    sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
-    df <- dbGetQuery(db, sql)
-    dbDisconnect(db)
-    # until we can clear up the waterbodies with multiple typologies, we need this fix
-    df <- df %>% filter(typology==typeselect())
-    cat(paste0("df.select nrows=",nrow(df),"\n"))
-    
-    df$date<-as.Date(df$date,origin="1970-01-01")
-    return(df)
-  })
-  
   
   observeEvent(input$goButton, {
     nSimMC <- input$n
     IndList <- input$indSelect
+    #cat(paste0("Indicators:",paste(paste0("'",input$indSelect,"'"),collapse = ","),"\n"))
+
+    withProgress(message = 'Calculating...', value = 0, {
     
-    #Check that at least one indicator has been selected
-    if (length(IndList) > 0) {
- 
-      n <- nrow(df.select())
-      
       db <- dbConnect(SQLite(), dbname=dbpath)
       periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
-      wblist<-paste(paste0("'",input$waterbody,"'"),collapse = ",")
+      wblist<-paste(paste0("'",values$wbselected,"'"),collapse = ",")
+      
       sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
       resAvg <- dbGetQuery(db, sql)
+      incProgress(0.2)
       sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,") AND sim <= ",nSimMC)
       resMC <- dbGetQuery(db, sql)
+      incProgress(0.2)
       sql<-paste0("SELECT * FROM resErr WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
       resErr <- dbGetQuery(db, sql)
+      incProgress(0.2)
       dbDisconnect(db)
-      resAvg <- resAvg %>% filter(Indicator %in% IndList) %>% filter(Type==typeselect())
-      resMC <- resMC %>% filter(Indicator %in% IndList) %>% filter(Type==typeselect())
-      resErr <- resErr %>% filter(Indicator %in% IndList) %>% filter(Type==typeselect())
-      
-     
+      resAvg <- resAvg %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
+      resMC <- resMC %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
+      resErr <- resErr %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
+
       values$resAvg <- resAvg
       values$resMC <- resMC
       values$resErr <- resErr
@@ -514,14 +524,12 @@ shinyServer(function(input, output, session) {
       values$res4MC <- ""
       values$resInd <- ""
       values$resObs <- ""
-      updateNavbarPage(session, "inTabset", selected = "Results")
-    } else{
-      #no indicators selected
-      showModal(modalDialog(
-        title = div(tags$b("No indicators selected", style = "color: red;")),
-        "You need to select at least one indicator!"
-      ))
-    }
+      #updateNavbarPage(session, "inTabset", selected = "Results")
+      #updateNavbarPage(session, "inTabset", selected = "Results")
+      
+    })
+      updateTabItems(session, "tabs", "status")
+      
     
   })
   
@@ -679,7 +687,7 @@ shinyServer(function(input, output, session) {
           level = 1
         ) %>%
         select(Region, WB, Type, Typename, Period, Class)
-      cat("left join res1MC2")
+      #cat("left join res1MC2")
       values$res1MC <- res1MC %>% left_join(res1Avg,by=c("Region", "WB", "Type", "Typename", "Period"))
     }
     values$res2MC <- ""
@@ -840,10 +848,11 @@ shinyServer(function(input, output, session) {
     values$sIndicator <-
       df$Indicator[input$resTableInd_rows_selected]
     
-    cat(paste0("Indicator=",values$sIndicator,"\n"))
+    #cat(paste0("Indicator=",values$sIndicator,"\n"))
+    
     
     df <- SelectObs(
-      df.select(),
+      dfobs(values$sWB,paste(paste0("'",values$periodselected,"'"),collapse = ",")),
       indicator = values$sIndicator,
       sWB = values$sWB,
       sPeriod = values$sPeriod
@@ -870,11 +879,14 @@ shinyServer(function(input, output, session) {
   
   
   observeEvent(values$res1MC, {
+    rmlist = c("Region", "WB", "Type", "Typename")
+    
     output$resTable1 <-
       ClassOutputTableDT(
         values$res1MC,
         Groups = c("Region", "WB", "Type", "Typename", "Period", "Class"),
-        roundlist = c("pGES"),
+         roundlist = c("pGES"),
+        remove = rmlist,
         ClassVar = "ClassMC"
       )
     
@@ -983,15 +995,23 @@ shinyServer(function(input, output, session) {
       vars <- ""
     }
     
+    if (typeof(values$resObs)!="list") {
+      plotHeight<-1
+      plotWidth<-1
+    }else{
+      plotHeight<-400
+      plotWidth<-600
+    }
     #cat(paste0("value$resObs [",typeof(values$resObs),"]\n"))
     
     output$resTableObs <-
       ClassObsTableDT(values$resObs, sDOM = "pl", roundlist = vars)
+    
     output$titleTableObs <- renderText({
       if (typeof(values$resObs)!="list") {
         ""
       } else{
-        "<h3>Observations:</h3>"
+        "Observations:"
       }
     })
     
@@ -1011,9 +1031,8 @@ shinyServer(function(input, output, session) {
 
       }
       return(p)
-    }, height = 400, width = 600)
-    
-    
+    }, height = plotHeight, width = plotWidth)
+
     
   })
   

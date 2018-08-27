@@ -7,6 +7,16 @@ source("ReadIndicatorType.R")
 source("classoutputtable.R")
 dfind<-ReadIndicatorType()
 
+pname<-"Nutrient loading"
+pname<-gsub(" ",".",pname)
+df <- dfind[dfind[,which(names(dfind)==pname)]=="X",c("Indicator","IndicatorDescription")]
+
+
+paste0(" \" ","x","y")
+
+
+df <- dfind[dfind$pname=="X",c("Indicator","IndicatorDescription")]
+
 #----------------------------------------------------------------
 #----------------------------------------------------------------
 #----------------------------------------------------------------
