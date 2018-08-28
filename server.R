@@ -388,7 +388,7 @@ shinyServer(function(input, output, session) {
     num_col<-ncol(df)
     cat(paste0("ncol=",num_col,"\n"))
     # reorder_columns
-    df<-df[,c(1,n,seq(2,n-1,1))]
+    df<-df[,c(1,num_col,seq(2,num_col-1,1))]
     
     values$df_ind_status <- df
     values$df_ind_type <-dftype
