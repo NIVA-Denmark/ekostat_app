@@ -19,7 +19,23 @@ shinyServer(function(input, output, session) {
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
   dbpath<-"data/ekostat.db"
-
+  
+ # ---- Database functions -----------------------------------
+  readdb <- function(dbname,strSQL){
+    db <- dbConnect(SQLite(), dbname=dbname)
+    df <- dbGetQuery(db, strSQL)
+    dbDisconnect(db)
+    return(df)
+  }  
+  
+  dfobs <- function(wblist,periodlist){
+    sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB = '",wblist,"'")
+    df<-readdb(dbpath, sql)
+    df <- df %>% filter(typology==values$typeselected)
+    df$date<-as.Date(df$date,origin="1970-01-01")
+    return(df)
+  } 
+  
   # Read list of indicators
   dfind<-ReadIndicatorType()
   dfperiod <- readdb(dbpath, "SELECT DISTINCT(Period) FROM resAvg")
@@ -42,21 +58,7 @@ shinyServer(function(input, output, session) {
     mutate(TypeNum = gsub("s",".5",TypeNum))
   dfwb_lan$TypeNum <- as.numeric(dfwb_lan$TypeNum)
   
-  # ---- Database functions -----------------------------------
-  readdb <- function(dbname,strSQL){
-    db <- dbConnect(SQLite(), dbname=dbname)
-    df <- dbGetQuery(db, strSQL)
-    dbDisconnect(db)
-    return(df)
-  }  
-  
-  dfobs <- function(wblist,periodlist){
-    sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB = '",wblist,"'")
-    df<-readdb(dbpath, sql)
-    df <- df %>% filter(typology==values$typeselected)
-    df$date<-as.Date(df$date,origin="1970-01-01")
-    return(df)
-  } 
+ 
   
   pressure_list<-function(){
     c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
