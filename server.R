@@ -434,6 +434,8 @@ shinyServer(function(input, output, session) {
 # ------------- go calculate action -----------------------------
 
 observeEvent(input$goButton, {
+  start.time <- Sys.time()
+  
   withProgress(message = 'Calculating...', value = 0, {
     IndList <- listIndicators()$Indicator
     #cat(paste0("Indicators:",paste(paste0("'",IndList,"'"),collapse = ","),"\n"))
@@ -469,6 +471,10 @@ observeEvent(input$goButton, {
 
   })
   updateTabItems(session, "tabs", "status")
+  
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  cat(paste0(wblist[1]," time:",time.taken,"\n"))
   
   
 })
