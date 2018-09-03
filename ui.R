@@ -63,8 +63,11 @@ shinyUI(
                          column(3,h2(" "),
                                 uiOutput("goButton"))),
                 fluidRow(column(6,
-                DT::dataTableOutput("dtind")))),
+                DT::dataTableOutput("dtind")))
+                ),
   
+        #,verbatimTextOutput("clickedwhat") 
+        
         # # tab content
         # tabItem(tabName = "data",
         #         fluidRow(column(9,""),
