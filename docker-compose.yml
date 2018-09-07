@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  ekostat:
+    build: .
+    ports:
+      - 3838:3838
+
