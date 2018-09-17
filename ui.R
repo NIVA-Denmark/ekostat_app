@@ -63,7 +63,8 @@ shinyUI(
                          column(3,h2(" "),
                                 uiOutput("goButton"))),
                 fluidRow(column(6,
-                DT::dataTableOutput("dtind")))
+                DT::dataTableOutput("dtind"))),
+                tableOutput("IndSelect")
                 ),
   
         #,verbatimTextOutput("clickedwhat") 

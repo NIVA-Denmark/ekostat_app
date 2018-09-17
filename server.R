@@ -28,6 +28,14 @@ shinyServer(function(input, output, session) {
     return(df)
   }  
   
+  # obtain the values of inputs
+  shinyValue = function(id, len) {
+    unlist(lapply(seq_len(len), function(i) {
+      value = input[[paste0(id, i)]]
+      if (is.null(value)) NA else value
+    }))
+  }
+  
   dfobs <- function(wblist,periodlist){
     sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB = '",wblist,"'")
     df<-readdb(dbpath, sql)
@@ -48,7 +56,8 @@ shinyServer(function(input, output, session) {
   values$df_ind_status<-""
   values$periodselected <- ""
   values$resAvgType <- ""
-  values$resMCType <- ""
+  values$resMCType <-""
+  values$IndSelection<-""
   
   dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan") %>%
     mutate(TypeName = Type) %>%
@@ -60,7 +69,6 @@ shinyServer(function(input, output, session) {
     mutate(TypeNum = gsub("s",".5",TypeNum))
   dfwb_lan$TypeNum <- as.numeric(dfwb_lan$TypeNum)
   
- 
   
   pressure_list<-function(){
     c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
@@ -254,6 +262,7 @@ shinyServer(function(input, output, session) {
     values$typeselectedname<-wb_list()[input$dtwb_rows_selected,"TypeName"]
     values$periodselected<-input$period
     values$watertypeselected<-input$waterType
+    values$IndSelection<-""
     updateTabItems(session, "tabs", "indicators")
     
     UpdateIndTable()
@@ -290,6 +299,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$pressure, {
+    values$IndSelection<-""
     UpdateIndTable()
   })
   
@@ -308,7 +318,110 @@ shinyServer(function(input, output, session) {
   
   
   # --------------- update indicator information / selection ----------------
+  
+  output$dtind = DT::renderDataTable({
+    df<-values$df_ind_status
+    if(typeof(df)!="list"){
+      df<-data.frame() 
+    }else{
+      num_col<-ncol(df)
+      
+      df$row<-seq(1,nrow(df),1)
+      df$Action<-paste0('Shiny.onInputChange(\"select_button\",',df$row, ')')
+      df$Edit<-buttonInput(actionButton,nrow(df), 'btn_',labels="WBs",actions=df[,"Action"])
+      df$Action<-NULL
+      df$row<-NULL
+      
+      #df$Edit<-buttonInput(actionButton,nrow(df), 'btn_',labels="WBs")
+      df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = df[,"Selected"],labels=df[,"IndicatorDescription"])
+      df$Interpolate<-shinyInput(checkboxInput, nrow(df), 'ind_', value=FALSE,labels="",width = '30px')
+      
+      # reorder_columns
+      df<-df[c(1,num_col+2,seq(2,num_col-1,1),num_col+3,num_col+1)]      
+      
+      num_col<-ncol(df)
+      df[,2:num_col] %>% rename(Indicator=Check)
+    }
+  },server=FALSE, escape=FALSE,selection='single',rownames=F, 
+  options=list(dom = 't',pageLength = 99,autoWidth=TRUE,columnDefs = list(list(targets=c(3),className="small")),
+               preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
+               drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
+  
   UpdateIndTable<-function(){
+    #withProgress(message = 'Getting indicator data...', value = 0, {
+      # Get the info on the status for the indicators
+      bOK<-TRUE
+      db <- dbConnect(SQLite(), dbname=dbpath)
+      
+      sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
+      df <- dbGetQuery(db, sql)
+      dbDisconnect(db)
+      
+      df<-CleanSubTypes(df)
+      
+      
+      pname<-input$pressure
+      if(is.null(pname)){bOK<-FALSE}
+      if(is.null(values$watertypeselected)){bOK<-FALSE}
+      if(is.null(values$periodselected)){bOK<-FALSE}
+      
+      if(bOK){
+        pname<-gsub(" ",".",pname)
+        df2 <- dfind %>% filter(Water_type==values$watertypeselected)
+        df2 <- df2[df2[,pname]=="X",]
+        df2 <- df2 %>% filter(!is.na(Indicator))
+        df2 <- df2 %>% select(Indicator)
+        if(nrow(df2)==0){bOK<-FALSE}
+      }
+      if(bOK){
+        df <- df %>% select(Indicator,Period,Code)
+        indlist<-paste(paste0("'",df2$Indicator,"'"),collapse = ",")
+        #cat(paste0("indlist=",indlist,"\n"))
+        df2$X<-1
+        df2$num<-seq(1,nrow(df2),1)
+        dforder<-df2 %>% select(Indicator)
+        
+        dfperiod<-data.frame(values$periodselected,stringsAsFactors=F)
+        dfperiod$X<-1
+        df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-c(X,num))
+        names(df2) = c("Indicator","Period")
+        
+        
+        db <- dbConnect(SQLite(), dbname=dbpath)
+        sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
+        dftypeperiod <- readdb(dbpath, sql)
+        #incProgress(0.2)
+        dbDisconnect(db)
+        
+        dftypeperiod<-CleanSubTypes(dftypeperiod)
+        
+        dfwb_type <- dfwb_lan %>% distinct(WB_ID,Name)
+        
+        dftypeperiod <- dftypeperiod %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
+          filter(Code==0) 
+        dftypeperiod<- df2 %>% left_join(dftypeperiod,by="Indicator")
+        dftypeperiod$Include<-T
+        
+        df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
+          mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
+          mutate(Data=ifelse(Code=='0',"YES","NO")) %>%
+          select(-Code) %>%
+          spread(key="Period",value="Data") %>%
+          left_join(select(dfind,Indicator,IndicatorDescription),by="Indicator")
+        
+        df<-dforder %>% left_join(df,by="Indicator") %>% mutate(Selected=TRUE)
+        
+        values$df_ind_status <- df
+        values$resAvgType <-dftypeperiod
+        
+      }else{
+        values$df_ind_status <-""
+        values$resAvgType <-""
+      }
+    #})
+  }
+  
+  UpdateIndTableXX<-function(){
     withProgress(message = 'Getting indicator data...', value = 0, {
       # Get the info on the status for the indicators
     bOK<-TRUE
@@ -330,7 +443,8 @@ shinyServer(function(input, output, session) {
       pname<-gsub(" ",".",pname)
       df2 <- dfind %>% filter(Water_type==values$watertypeselected)
       df2 <- df2[df2[,pname]=="X",]
-      df2<-df2 %>% select(Indicator)
+      df2 <- df2 %>% filter(!is.na(Indicator))
+      df2 <- df2 %>% select(Indicator)
       if(nrow(df2)==0){bOK<-FALSE}
     }
     if(bOK){
@@ -351,34 +465,18 @@ shinyServer(function(input, output, session) {
       sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
       dftypeperiod <- readdb(dbpath, sql)
       incProgress(0.2)
-      #sql<-paste0("SELECT * FROM resYear WHERE Type ='",values$typeselected,"' and Indicator in (",indlist,")")
-      #dftypeyear <- readdb(dbpath, sql)
-      #incProgress(0.2)
-      #sql<-paste0("SELECT * FROM resMC WHERE Type ='",values$typeselected,"' and Indicator in (",indlist,")")
-      #dftypeMC <- readdb(dbpath, sql)
-      #incProgress(0.2)
       dbDisconnect(db)
       
       
       dftypeperiod<-CleanSubTypes(dftypeperiod)
-      #dftypeyear<-CleanSubTypes(dftypeyear)
-      #dftypeMC<-CleanSubTypes(dftypeMC)
-      
+
       dfwb_type <- dfwb_lan %>% distinct(WB_ID,Name)
       
       dftypeperiod <- dftypeperiod %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
         filter(Code==0) 
       dftypeperiod<- df2 %>% left_join(dftypeperiod,by="Indicator")
       dftypeperiod$Include<-T
-      #dftypeyear <- dftypeyear %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
-      #  filter(Code==0) 
-      #dftypeyear<- df2 %>% left_join(dftypeyear,by="Indicator")
-      
-      #dftypeMC <- dftypeMC %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
-      #  filter(Code==0) 
-      #dftypeMC<- df2 %>% left_join(dftypeMC,by="Indicator")
- 
-      
+
       df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
         mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
         mutate(Data=ifelse(Code=='0',"YES","NO")) %>%
@@ -398,19 +496,20 @@ shinyServer(function(input, output, session) {
       #df$Edit<-buttonInput(actionButton,nrow(df), 'btn_',labels="WBs")
       df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = TRUE,labels=df[,"IndicatorDescription"])
       df$Interpolate<-shinyInput(checkboxInput, nrow(df), 'ind_', value=FALSE,labels="",width = '30px')
-
-     #Name = c('Dilbert', 'Alice', 'Wally', 'Ashok', 'Dogbert'),
-      #Motivation = c(62, 73, 3, 99, 52),
-      #Actions = shinyInput(actionButton, 5, 'button_', label = "Fire", onclick = 'Shiny.onInputChange(\"select_button\",  this.id)' ),
-      #stringsAsFactors = FALSE,
-      #row.names = 1:5
       
       # reorder_columns
       df<-df[c(1,num_col+2,seq(2,num_col-1,1),num_col+3,num_col+1)]
+      #df$Select=TRUE
       
       #cat(paste0("names(df): ",names(df),"\n"))
       values$df_ind_status <- df
       values$resAvgType <-dftypeperiod
+      
+      for(i in 1:nrow(values$df_ind_status)){
+        observeEvent(input[[paste0("ind_",i)]],
+                     {cat(paste0("check ",i,"\n"))})
+        }
+      
       #values$resYrType <-dftypeyear
       #values$resMCType <- dftypeMC
     }else{
@@ -419,43 +518,30 @@ shinyServer(function(input, output, session) {
       #values$resYrType <-""
       #values$resMCType <-""
     }
-    })}
-  
-  # observe({
-  #   cat(paste0("button ",i,"\n"))
-  # })
+    })
+    }
 
-    
- # # observeEvent(input$,{
- # #   
- # # })
- #  
- #  #observer for indicator edit buttons
- #  observe({
- #    res<-isolate(values$df_ind_status)
- #    if(typeof(res)=="list"){
- #      if(nrow(res)>0){
- #        input_btn <- paste0("btnx_", seq_len(nrow(res)))
- #        
- #        lapply(input_btn,
- #               function(x){
- #                 observeEvent(
- #                   input[[x]],
- #                   {
- #                     i <- as.numeric(sub("btn_", "", x))
- #                     #Data$Info <- res[i, -length(res)]
- #                     ind<-res$Indicator[i]
- #                     SelectTypeWBs(i,ind)
- #                     #cat(paste0("btn_",i,"\n"))
- #                   }
- #                 )
- #               })
- #      }}
- #    
- #  })
-  
+  # observe({
+  #   input$pressure
+  #   values$df_ind_status
+  #   cat("observe for check boxes...\n")
+  #   dfind$Indicator
+  #   dfind<-isolate(values$df_ind_status)
+  #   if(typeof(dfind)!="list"){
+  #     df<-data.frame()
+  #   }else{
+  #     if(nrow(dfind)>0){
+  #       df<-data.frame(Indicator=dfind$Indicator,Select=shinyValue('ind_',nrow(dfind)))
+  #     }else{
+  #       df<-data.frame()
+  #     }
+  #   }
+  #   values$IndSelection<-df    
+  # })      
+
 #SelectTypeWBs<-function(n,indicator){
 observe({
+  cat("observe for buttons...\n")
   i<-input$select_button
   if(!is.null(i)){
   dfind<-isolate(values$df_ind_status)
@@ -502,58 +588,91 @@ observe({
 }})
   
 observeEvent(input$stnok, {
-  
   cat(paste0("stn modal clicked OK\n"))
   removeModal()  
 })
 
-  output$IndSelect = renderPrint({IndList()})
+
+   output$IndSelect = renderTable({
+     df<-values$IndSelection
+     })
+
+   
+
+   
+   listIndicatorsManual <- function(){
+     dfi<-values$df_ind_status
+     if(typeof(dfi)!="list"){
+       df<-data.frame()
+     }else{
+       ni<-nrow(dfi)
+       if(ni>0){
+         df<-data.frame(Indicator=dfi$Indicator,Select=shinyValue('ind_',ni))
+       }else{
+         df<-data.frame()
+       }
+     }
+     return(df)   
+   }
+
+   listIndicators <- reactive({
+     dfi<-values$df_ind_status
+     if(typeof(dfi)!="list"){
+       df<-data.frame()
+     }else{
+       if(nrow(dfi)>0){
+         df<-data.frame(Indicator=dfi$Indicator,Select=shinyValue('ind_',nrow(dfi)))
+       }else{
+         df<-data.frame()
+       }
+     }
+     return(df)   
+   })
+   
+      #output$x2 = renderPrint({
+   #  data.frame(v1 = shinyValue('v1_', input$n), v2 = shinyValue('v2_', input$n))
+   #})
   
-  listIndicators <- reactive({
-    df<-values$df_ind_status
-    if(typeof(df)!="list"){
-      df<-data.frame()
-    }else{
-      if(nrow(df)>0){
-      df$OK<-NA
-      for(i in 1:nrow(df)){
-        val<-input[[paste0('ind_', i)]]
-        if(!is.null(val)){
-          df$OK[i]<-input[[paste0('ind_', i)]]
-        }
-      }
-      df %>% 
-        filter(OK==TRUE) %>%
-        select(Indicator)
-      }else{
-        df<-data.frame()
-      }
-    }
-  })
-  
-  output$dtind = DT::renderDataTable({
-    df<-values$df_ind_status
-    if(typeof(df)!="list"){
-      df<-data.frame() #%>% 
-      }else{
-      num_col<-ncol(df)
-      df[,2:num_col] %>% rename(Indicator=Check)
-    }
-    },server=FALSE, escape=FALSE,selection='single',rownames=F, 
-  options=list(dom = 't',pageLength = 99,autoWidth=TRUE,columnDefs = list(list(targets=c(3),className="small")),
-               preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
-               drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
+  # listIndicators <- reactive({
+  #   #cat("   updating indicator list...\n")
+  #   df<-values$df_ind_status
+  #   if(typeof(df)!="list"){
+  #     df<-data.frame()
+  #   }else{
+  #     if(nrow(df)>0){
+  #     df$OK<-NA
+  #     for(i in 1:nrow(df)){
+  #       val<-input[[paste0('ind_', i)]]
+  #       if(!is.null(val)){
+  #         values$df_ind_status[i,"Select"]<-input[[paste0('ind_', i)]]
+  #         df$OK[i]<-input[[paste0('ind_', i)]]
+  #         #cat(paste0("check",i,"=",val,"\n"))
+  #       }
+  #     }
+  #     df<-df %>%
+  #       filter(OK==TRUE) %>%
+  #       select(Indicator)
+  #     }else{
+  #       df<-data.frame()
+  #     }
+  #   }
+  #   return(df)
+  # })
   
 
 # ------------- go calculate action -----------------------------
 
+  #values$df_ind_status  
+  
 observeEvent(input$goButton, {
   start.time <- Sys.time()
-  
+  df<-listIndicatorsManual()
+  cat(paste0(df,"\n"))
   withProgress(message = 'Calculating...', value = 0, {
-    IndList <- listIndicators()$Indicator
+    df<- isolate(listIndicators())
+    IndList <- df$Indicator
     #cat(paste0("Indicators:",paste(paste0("'",IndList,"'"),collapse = ","),"\n"))
-  
+    #cat(paste0("Selected:",values$df_ind_status[,"Select"],"\n"))
     nSimMC <- input$n
     
     periodlist<-paste(paste0("'",values$periodselected,"'"),collapse = ",")
@@ -592,6 +711,30 @@ observeEvent(input$goButton, {
   
   
 })
+  
+
+# --------------------------------------------------------------------
+# ------------- RESULTS ----------------------------------------------
+# --------------------------------------------------------------------
+   # Status page titles
+  output$SelectedWBStatus<-renderText({
+    if(values$wbselected=="") {
+      titletext<-"No Waterbody Selected"
+    }else{
+      titletext<-paste0(values$wbselected," - ",values$wbselectedname)
+    }
+    titletext
+  })
+  
+  output$SelectedTypeStatus<-renderText({
+    if(values$typeselectedname==""){
+      titletext<-""
+    }else{
+      titletext<-paste0("Type: ",values$typeselectedname)
+    }   
+  })
+  
+  
   
   
   observeEvent(input$chkClassBnds, {

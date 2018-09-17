@@ -56,13 +56,14 @@ buttonInput = function(FUN, len, id, labels, actions, ...) {
   inputs
 }
 
-# obtain the values of inputs
-shinyValue = function(id, len) {
-  unlist(lapply(seq_len(len), function(i) {
-    value = input[[paste0(id, i)]]
-    if (is.null(value)) NA else value
-  }))
-}
+# # obtain the values of inputs
+# shinyValue = function(id, len) {
+#   unlist(lapply(seq_len(len), function(i) {
+#     value = input[[paste0(id, i)]]
+#     if (is.null(value)) NA else value
+#   }))
+# }
+
 
 IndicatorMonths <- function(df.months,typology,indicator){
   
