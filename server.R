@@ -8,12 +8,18 @@ library(prodlim)
 library(sparkline)
 library(RSQLite)
 library(data.table)
+library(magrittr)
 
 source("ReadIndicatorType.R")
 source("classoutputtable.R")
 source("Aggregation.R")
 source("helpfunctions.R")
+source("extrapolation.R")
 
+source("IndicatorFunctions.R")
+source("ReadIndicatorType.R")
+source("ReadVariances.R")
+source("ReadBounds.R")
 
 shinyServer(function(input, output, session) {
   
@@ -28,6 +34,10 @@ shinyServer(function(input, output, session) {
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
   dbpath<-"data/ekostat.db"
+  
+  dfind<-ReadIndicatorType()
+  dfvar<-ReadVariances()
+  dfbounds<-ReadBounds()
   
  # ---- Database functions -----------------------------------
   readdb <- function(dbname,strSQL){
@@ -391,10 +401,19 @@ shinyServer(function(input, output, session) {
         
         
         db <- dbConnect(SQLite(), dbname=dbpath)
-        sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,"' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
+        sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,
+                    "' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
         dftypeperiod <- readdb(dbpath, sql)
         #incProgress(0.2)
         dbDisconnect(db)
+        
+        # # Get distinct indicator + subtype for the selected WB
+        # # use this to match with indicator/subtype combinations from dftypeperiod
+        # 
+        # sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,
+        #             "' and Indicator in (",indlist,") AND WB ='", values$wbselected,"'")
+        # dfindsub<-readdb(dbpath, sql)
+        # dfindsub<-dfindsub %>% distinct(Indicator,IndSubtype)
         
         dftypeperiod<-CleanSubTypes(dftypeperiod)
         
@@ -530,31 +549,34 @@ observeEvent(input$goButton, {
     nSimMC <- input$n
     
     
-    
+    IndList<-paste(paste0("'",IndList,"'"),collapse = ",")
     periodlist<-paste(paste0("'",values$periodselected,"'"),collapse = ",")
     wblist<-paste(paste0("'",values$wbselected,"'"),collapse = ",")
-    
+
+ 
+  # Get results for the waterbody we are showing results for   
     db <- dbConnect(SQLite(), dbname=dbpath)
-    sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
+    sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
     resAvg <- dbGetQuery(db, sql)
-    incProgress(0.2)
-    sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,") AND sim <= ",nSimMC)
-    resMC <- dbGetQuery(db, sql)
-    incProgress(0.2)
-    sql<-paste0("SELECT * FROM resErr WHERE period IN (",periodlist,") AND WB IN (",wblist,")")
-    resErr <- dbGetQuery(db, sql)
     incProgress(0.1)
+    sql<-paste0("SELECT * FROM resYear WHERE period IN (",periodlist,") AND WB IN (",wblist,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+    resYr <- dbGetQuery(db, sql)
+    incProgress(0.1)
+    sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"' AND sim <= ",nSimMC)
+    resMC <- dbGetQuery(db, sql)
+    incProgress(0.1)
+    sql<-paste0("SELECT * FROM resErr WHERE period IN (",periodlist,") AND WB IN (",wblist,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+    resErr <- dbGetQuery(db, sql)
     dbDisconnect(db)
-    resAvg <- resAvg %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
-    resMC <- resMC %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
-    resErr <- resErr %>% filter(Indicator %in% IndList) %>% filter(Type==values$typeselected)
     
-    #-----------------------------------------------------------------------
-    incProgress(0.1,message="extrapolation")
+     #-----------------------------------------------------------------------
+    incProgress(0.1,message="getting data for extrapolation")
     #find which indicators need to be (and can be extrapolated)
     dfextrap<-values$resAvgType
-    #save(dfextrap,file="test.Rda")
-    
     dfmatch<-resAvg %>% 
       filter(Code==0) %>% 
       select(Period,Indicator) %>%
@@ -564,12 +586,80 @@ observeEvent(input$goButton, {
     dfextrap<-dfextrap %>% 
       filter(is.na(OK)) %>%
       select(WB,Indicator,Period,Type)
-    #save(dfextrap1,file="test1.Rda")
+    # this is the list of indicators available from extrapolation stations which 
+    # do NOT have a result for the WB we are considering
+
+    # Get results for the waterbodies used for extrapolation we are showing results for   
+    wblisttype<-paste(paste0("'",dfextrap$WB,"'"),collapse = ",")
+    db <- dbConnect(SQLite(), dbname=dbpath)
+    sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+    resAvgtype <- dbGetQuery(db, sql)
+    incProgress(0.1)
+    sql<-paste0("SELECT * FROM resYear WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+    resYrtype <- dbGetQuery(db, sql)
+    incProgress(0.1)
+    sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
+                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"' AND sim <= ",nSimMC)
+    resMCtype <- dbGetQuery(db, sql)
+    incProgress(0.1)
+    dbDisconnect(db)    
     
+    #function(dfextrap,dfbnds,nsim,resYr,resAvg,resMC){
+    resExtrap<-extrapolation(dfextrap,dfbounds,input$n,resYrtype,resAvgtype,resMCtype)
+
+    resAvgExtrap<-resExtrap$dfAvg
+    resAvgExtrap<-resAvgExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
+    resAvgExtrap<-resAvgExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
+    resAvgExtrap<-resAvgExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype")) %>%
+      rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") %>%
+      select(WB,Type,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+             Months,Unit,Worst,PB,MP,GM,HG,Ref,Mean,StdErr,Code,Note) %>%
+      mutate(Worst=as.numeric(Worst),
+             PB=as.numeric(PB),
+             MP=as.numeric(MP),
+             GM=as.numeric(GM),
+             HG=as.numeric(HG),
+             Ref=as.numeric(Ref))
     
+    resMCExtrap<-resExtrap$dfMC
+    resMCExtrap<-resMCExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
+    resMCExtrap<-resMCExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
+    resMCExtrap<-resMCExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype")) %>%
+      rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") %>%
+      select(WB,Type,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+             Months,Unit,Worst,PB,MP,GM,HG,Ref,sim,Value,Code,Note)%>%
+      mutate(Worst=as.numeric(Worst),
+             PB=as.numeric(PB),
+             MP=as.numeric(MP),
+             GM=as.numeric(GM),
+             HG=as.numeric(HG),
+             Ref=as.numeric(Ref))
     
+    resList<-list(resAvg=resAvg,resAvgExtrap=resAvgExtrap,resMC=resMC[1:100,],resMCExtrap=resMCExtrap[1:100,])
+    save(resList,file="resList.Rda")
     
+    #filter out the results which will be replaced by extrapolated results
+    dfmatch<-resAvgExtrap %>% 
+      filter(Code==0,!is.na(Mean)) %>% 
+      select(Period,Indicator) %>%
+      mutate(OK=1)
     
+    resAvg<-resAvg %>% 
+      left_join(dfmatch,by=c("Period","Indicator")) %>% 
+      filter(is.na(OK)) %>%
+      select(-OK)
+
+    resMC<-resMC %>% 
+      left_join(dfmatch,by=c("Period","Indicator")) %>% 
+      filter(is.na(OK)) %>%
+      select(-OK)
+    
+    resAvg<-resAvg %>% bind_rows(resAvgExtrap)
+    resMC<-resMC %>% bind_rows(resMCExtrap)
+    
+    #save(resExtrap,file="resList.Rda")
     
     incProgress(0.1,message="aggregating results")
     #-----------------------------------------------------------------------

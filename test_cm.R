@@ -10,10 +10,15 @@ source("ReadBounds.R")
 #---------------------------------------------------------------------------------
 dbpath<-"data/ekostat.db"
 values <- list()
-values$wbselected<-"SE584695-175315"
+#values$wbselected<-"SE584695-175315"
+values$wbselected<-"SE584870-174310" #Asköfjärden
 values$watertypeselected<-"Coastal"
 values$typeselected <- "12n"
-values$periodselected<-"2010-2015"
+values$periodselected<-"2004-2009" #"2010-2015"
+ind<-"CoastSecchiEQR"
+ind<-"CoastBQI"
+ind<-"CoastChlaEQR"
+
 #---------------------------------------------------------------------------------
 readdb <- function(dbname,strSQL){
   db <- dbConnect(SQLite(), dbname=dbname)
@@ -81,11 +86,11 @@ dftypeMC<- df2 %>% left_join(dftypeMC,by="Indicator")
 
 
 
-ind<-"CoastSecchiEQR"
 
 WB_type_list<-dftypeperiod %>%
   filter(Indicator==ind) %>%
-  distinct(WB)
+  distinct(WB) %>%
+  filter(!is.na(WB))
 ntype<-WB_type_list %>% nrow()
 
 # Get list of variance components from water type (e.g. Coastal) and waterbody type (e.g. 12n)
@@ -106,21 +111,23 @@ MonthInclude<-IndicatorMonths(dfmonths,values$typeselected,ind)
 get_un<-function(dfp,dfa,dfmc,wblist,i){
   ix<-0
   for(wb in wblist){
-    ix<-ix+1
     period<-dfp %>% 
       filter(WB==wb,Indicator==i) %>%
-      select(mean=Mean,stderr=StdErr)
+      select(mean=Mean,stderr=StdErr) 
     annual<-dfa %>% 
       filter(WB==wb,Indicator==i) %>%
-      select(year=Year,mean=Mean,stderr=StdErr)
+      select(year=Year,mean=Mean,stderr=StdErr) 
     indicator_sim<-dfmc %>% 
       filter(WB==wb,Indicator==i) %>%
       select(Value)
     uni<-list(period=period,annual=annual,indicator_sim=indicator_sim$Value,result_code=0)
-    if(ix==1){
-      un<-list(uni)
-    }else{
-      un[[ix]]<-uni
+    if(nrow(dfp)>0){
+      ix<-ix+1
+      if(ix==1){
+        un<-list(uni)
+      }else{
+        un[[ix]]<-uni
+      }
     }
   }
   return(un)
@@ -129,11 +136,15 @@ get_un<-function(dfp,dfa,dfmc,wblist,i){
 wblist<-WB_type_list$WB
 wblist<-wblist[1:2]
 
-x<-get_un(dftypeperiod,dftypeyear,dftypeMC,wblist,ind)
+un<-get_un(dftypeperiod,dftypeyear,dftypeMC,wblist,ind)
+un<-list(un[[1]])
 
 yrfrom <- as.numeric(substr(values$periodselected,1,4))
 yrto <- as.numeric(substr(values$periodselected,6,9))
-CalculateIndicatorType(ind,x,variance_list,ntype,yrfrom,yrto,n_iter=500)
+test<-CalculateIndicatorType(ind,un,variance_list,ntype,yrfrom,yrto,n_iter=500)
+
+
+ind_typ_input<-list(Indicator=ind,unc_list=un,var_list=variance_list,ntype_WB=ntype,startyear=yrfrom,endyear=yrto,n_iter=500)
 
 # -------------------------------------------------------------------------
 load("../ekostat_calc/from_JAC/20180508/test_cm/un.Rda")
@@ -158,3 +169,15 @@ annual<-dftypeyear %>%
   filter(WB==wblist[2],Indicator==ind)
 
 dftypeperiod %>% filter(Indicator==ind) %>% group_by(WB) %>% summarise(n=n()) %>% arrange(desc(n))
+
+cat(paste0("ok2\n\n"))
+
+
+load("extrap_input.Rda")
+listperiod<-extrap_input[[1]]
+listyr<-extrap_input[[2]]
+listMC<-extrap_input[[3]]
+
+
+
+
