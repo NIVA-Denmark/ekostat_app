@@ -5,7 +5,7 @@ Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastBiovol	biovol	Phytop
 Coastal	Biological	Phytoplankton	Phytoplankton biomass	CoastBiovolEQR	biovol	Phytoplankton biovolume	Phytoplankton biovolume (EQR)	X							
 Coastal	Biological	Benthic fauna	Composition and diversity	CoastBQI	BQI	BQI	Benthic Quality Index (BQI)	X	X						X
 Coastal	Biological	Benthic vegetation	Composition and abundance	CoastMSMDI	MSMDI	MSMDI	Multi-Species Maximum Depth Index (MSMDI)	X							X
-Coastal	Supporting	Water transparency	Secchi depth	CoastSecchi	secchi	Secchi depth	Secchi Depth		X						X
+Coastal	Supporting	Water transparency	Secchi depth	CoastSecchi	secchi	Secchi depth	Secchi Depth								X
 Coastal	Supporting	Water transparency	Secchi depth	CoastSecchiEQR	secchi	Secchi depth	Secchi Depth (EQR)	X	X						
 Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinter	DIN	Dissolved inorganic Nitrogen	Winter DIN conc.								X
 Coastal	Supporting	Nutrients	Nitrogen	CoastDINwinterEQR	DIN	Dissolved inorganic Nitrogen	Winter DIN conc. (EQR)	X							

@@ -8,13 +8,23 @@ library(shinyjs)
 ui <- 
 shinyUI(
   
+  
   dashboardPage(skin = "black",title="WATERS Status Assessment Tool",
-    dashboardHeader(title = tags$a(tags$img(src='waters_2.gif',height='20',width='204'))
 
+    dashboardHeader(title = tags$a(tags$img(src='waters_2.gif',height='20',width='204'))
                                   ),
+    
     dashboardSidebar(
       sidebarMenuOutput(outputId = "dy_menu")),
     dashboardBody(
+      
+      #shinyjs::useShinyjs(),
+      #js function to reset a button, variableName is the button name whose value we want to reset
+      #tags$script("Shiny.addCustomMessageHandler('resetInputValue', function(variableName){
+      #            Shiny.onInputChange(variableName, null);
+      #            });
+      #            "),  
+      
       tags$head(tags$style(HTML("td.small{width:10px;}"))),
       tags$script("$(document).on('click', '#dtind button', function () {
                     Shiny.onInputChange('lastClickId',this.id);
@@ -57,28 +67,17 @@ shinyUI(
   
         # tab content
         tabItem(tabName = "indicators",
-                h3(textOutput("SelectedWB")),
-                fluidRow(column(9,textOutput("SelectedType"))),
-                fluidRow(column(4,uiOutput("selectPressure")),
-                         column(3,h2(" "),
-                                uiOutput("goButton"))),
-                fluidRow(column(6,
-                DT::dataTableOutput("dtind"))),
-                tableOutput("IndSelect")
-                ),
-  
-        #,verbatimTextOutput("clickedwhat") 
-        
-        # # tab content
-        # tabItem(tabName = "data",
-        #         fluidRow(column(9,""),
-        #                  column(3,"")),
-        #         fluidRow(column(5, offset = 1,h4("Data available")),
-        #                  column(4,h4("WBs of same type with data"))),
-        #         
-        #   fluidRow(column(4, offset = 1,
-        #     ""#DT::dataTableOutput("dtind")
-        #   ))),
+               h3(textOutput("SelectedWB")),
+               fluidRow(column(9,textOutput("SelectedType"))),
+               fluidRow(column(4,uiOutput("selectPressure")),
+                        column(3,h2(" "),uiOutput("goButton")),
+                        column(2,h2(" ")),
+                        column(1,h2(" "),uiOutput("btnExtrap"))
+                        ),
+               fluidRow(column(7,DT::dataTableOutput("dtind")),
+                        column(3,DT::dataTableOutput("dtextrap"))
+               )
+               ),
    
         # tab content
         tabItem(tabName = "status",
@@ -92,8 +91,7 @@ shinyUI(
                     p("Check this option to include indicators which otherwise would be ignored because they don't meet the requirements for number of years with data.")
                   )
                 ),
-                #uiOutput("chkIndicators")),
-                
+
                 fluidRow(column(width=3,htmlOutput("titleTable1"),DT::dataTableOutput("resTable1")),
                          column(width=4,htmlOutput("titleTable2"),DT::dataTableOutput("resTable2")),
                          column(width=5,htmlOutput("titleTable3"),DT::dataTableOutput("resTable3"))
