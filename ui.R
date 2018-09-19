@@ -70,10 +70,15 @@ shinyUI(
                h3(textOutput("SelectedWB")),
                fluidRow(column(9,textOutput("SelectedType"))),
                fluidRow(column(4,uiOutput("selectPressure")),
-                        column(3,h2(" "),uiOutput("goButton")),
-                        column(2,h2(" ")),
-                        column(1,h2(" "),uiOutput("btnExtrap"))
-                        ),
+                        column(2,h2(" "),uiOutput("goButton")),
+                        column(1,h2(" "),
+                               checkboxInput("IgnoreErr", 
+                                             "Use all data",
+                                              value = FALSE, width = '100%')),
+                        column(3,h2(" "),
+                               p("Use all data for the selected waterbody, including indicators which have data for fewer than 3 out of 6 years.")#,
+                        #column(1,h2(" "),uiOutput("btnExtrap"))
+                        )),
                fluidRow(column(7,DT::dataTableOutput("dtind")),
                         column(3,DT::dataTableOutput("dtextrap"))
                )
@@ -88,11 +93,8 @@ shinyUI(
                 column(width=4,
 
                         checkboxInput("ShowExtrap", "Show extrapolated results. Check this option to include indicators calculated by extrapolating from results from other waterbodies within same type",
-                                      value = TRUE, width = '100%'),
+                                      value = TRUE, width = '100%')
  
-                       checkboxInput("IgnoreErr", "Show all data for selected waterbody. Check this option to include indicators for this waterbody which otherwise would be ignored because they don't meet the requirements for number of years with data.",
-                                     value = FALSE, width = '100%'),
-                    p("The two options are mutually exclusive.")
                 )
                 ),
 

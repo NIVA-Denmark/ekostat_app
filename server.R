@@ -258,7 +258,6 @@ shinyServer(function(input, output, session) {
   })
   
   output$buttonWB <- renderUI({
-    #cat(paste0("type=",typeof(input$dtwb_rows_selected),"\n"))
     if(!is.null(input$dtwb_rows_selected)){
       if (input$dtwb_rows_selected > 0) {
         df<-wb_list()
@@ -428,7 +427,7 @@ shinyServer(function(input, output, session) {
         
         df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
           mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
-          mutate(Data=ifelse(Code=='0',"OK","-")) %>%
+          mutate(Data=ifelse(Code=='0',"OK",ifelse(Code=='-1',"<3yrs","-"))) %>%
           select(-Code) %>%
           spread(key="Period",value="Data") %>%
           left_join(select(dfind,Indicator,IndicatorDescription),by="Indicator")
@@ -447,7 +446,7 @@ shinyServer(function(input, output, session) {
 
 
   output$dtextrap = DT::renderDataTable({
-    output$btnExtrap <- NULL
+    #output$btnExtrap <- NULL
 
     df<-values$resAvgType
     if(typeof(df)!="list"){
@@ -533,11 +532,12 @@ shinyServer(function(input, output, session) {
   #   cat(paste0(df,"\n"))
   # })
    
-   
-# ------------- go calculate action -----------------------------
 
-  #values$df_ind_status  
-  
+   
+# ------------------------------------------------------------------- 
+# ------------- go calculate action -----------------------------
+# ------------------------------------------------------------------- 
+   
 observeEvent(input$goButton, {
   start.time <- Sys.time()
   #df<-listIndicators()
@@ -579,9 +579,18 @@ observeEvent(input$goButton, {
      #-----------------------------------------------------------------------
     incProgress(0.1,message="getting data for extrapolation")
     #find which indicators need to be (and can be extrapolated)
+    
+    # if we choose to use indicators with less than 3 years data, then these 
+    # should be included in the list of indicators NOT to be extrapolated  
+    if(isolate(input$IgnoreErr)){
+      matchcode<-c(0,-1)
+    }else{
+      matchcode<-c(0)
+    }
+    
     dfextrap<-values$resAvgType
     dfmatch<-resAvg %>% 
-      filter(Code==0) %>% 
+      filter(Code %in% matchcode) %>% 
       select(Period,Indicator) %>%
       mutate(OK=1)
     dfextrap<-dfextrap %>% 
@@ -661,32 +670,24 @@ observeEvent(input$goButton, {
     #cat("6\n")
     
     #filter out the results which will be replaced by extrapolated results
-    # dfmatch<-resAvgExtrap %>%
-    #   filter(Code==0,!is.na(Mean)) %>%
-    #   select(Period,Indicator) %>%
-    #   mutate(OK=1)
-    # 
-    # resAvg<-resAvg %>%
-    #   left_join(dfmatch,by=c("Period","Indicator")) %>%
-    #   filter(is.na(OK)) %>%
-    #   select(-OK)
-    # 
-    # resMC<-resMC %>%
-    #   left_join(dfmatch,by=c("Period","Indicator")) %>%
-    #   filter(is.na(OK)) %>%
-    #   select(-OK)
+     dfmatch<-resAvgExtrap %>%
+       filter(Code==0,!is.na(Mean)) %>%
+       select(Period,Indicator) %>%
+       mutate(OK=1)
+     
+     resAvg<-resAvg %>%
+       left_join(dfmatch,by=c("Period","Indicator")) %>%
+       filter(is.na(OK)) %>%
+       select(-OK)
+     
+     resMC<-resMC %>%
+       left_join(dfmatch,by=c("Period","Indicator")) %>%
+       filter(is.na(OK)) %>%
+       select(-OK)
     
     resAvg<-resAvg %>% bind_rows(resAvgExtrap)
     resMC<-resMC %>% bind_rows(resMCExtrap)
     
-    if (!input$IgnoreErr) {
-      resMC <-  ClearErrorValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-      resAvg <- ClearErrorValues(resAvg, varList = c("EQR", "Class"))
-    }
-    if (!input$ShowExtrap) {
-      resMC <-  ClearExtrapValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-      resAvg <- ClearExtrapValues(resAvg, varList = c("EQR", "Class"))
-    }
     
     resList<-list(resAvg=resAvg,resMC=resMC)
     save(resList,file="resList.Rda")
@@ -761,12 +762,6 @@ observeEvent(input$goButton, {
           Class = ClassAvg,
           EQR = EQRavg
         )
-      if (!input$IgnoreErr) {
-        df <- ClearErrorValues(df, varList = c("EQR", "Class", "ClassMC", "EQRMC"))
-      }
-      if (!input$ShowExtrap) {
-        df <- ClearExtrapValues(df, varList = c("EQR", "Class", "ClassMC", "EQRMC"))
-      }
       
       output$resTableMC <- ClassOutputTableDT(
         df,
@@ -804,12 +799,7 @@ observeEvent(input$goButton, {
           Class = ClassAvg,
           EQR = EQRavg
         )
-      if (!input$IgnoreErr) {
-        df <- ClearErrorValues(df, varList = c("EQR", "Class", "ClassMC", "EQRMC"))
-      }
-      if (!input$ShowExtrap) {
-        df <- ClearExtrapValues(df, varList = c("EQR", "Class", "ClassMC", "EQRMC"))
-      }
+     
       output$resTableMC <- ClassOutputTableDT(
         df,
         Groups = grplist,
@@ -822,14 +812,6 @@ observeEvent(input$goButton, {
       resMC <- values$resMC
       resAvg <- values$resAvg
       
-      if (!input$IgnoreErr) {
-        resMC <- ClearErrorValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-        resAvg <- ClearErrorValues(resAvg, varList = c("EQR", "Class"))
-      }
-      if (!input$ShowExtrap) {
-        resMC <- ClearExtrapValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-        resAvg <- ClearExtrapValues(resAvg, varList = c("EQR", "Class"))
-      }
       res1MC <-
         Aggregate(
           resMC,
@@ -847,19 +829,6 @@ observeEvent(input$goButton, {
     }
   })
   
-  observeEvent(input$ShowExtrap, {
-    if(input$IgnoreErr && input$ShowExtrap){
-      updateCheckboxInput(session,"IgnoreErr", value = 0)
-    }
-    ShowHideExtrapErrs()
-  })
-  
-  observeEvent(input$IgnoreErr, {
-    if(input$IgnoreErr && input$ShowExtrap){
-      updateCheckboxInput(session,"ShowExtrap", value = 0)
-    }
-    ShowHideExtrapErrs()
-  })
   
   
   ShowHideExtrapErrs<-function(){
@@ -871,12 +840,7 @@ observeEvent(input$goButton, {
           Class = ClassAvg,
           EQR = EQRavg
         )
-      if (!input$IgnoreErr) {
-        df <- ClearErrorValues(df, varList = c("EQR", "Class", "EQRMC", "ClassMC"))
-      }
-      if (!input$ShowExtrap) {
-        df <- ClearExtrapValues(df, varList = c("EQR", "Class", "EQRMC", "ClassMC"))
-      }
+
       
       grplist <-
         c(
@@ -894,14 +858,7 @@ observeEvent(input$goButton, {
       )
       resMC <- values$resMC
       resAvg <- values$resAvg
-      if (!input$IgnoreErr) {
-        resMC <-  ClearErrorValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-        resAvg <- ClearErrorValues(resAvg, varList = c("EQR", "Class"))
-      }
-      if (!input$ShowExtrap) {
-        resMC <-  ClearExtrapValues(resMC, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-        resAvg <- ClearExtrapValues(resAvg, varList = c("EQR", "Class"))
-      }
+      
       res1MC <-
         Aggregate(
           resMC,
@@ -932,12 +889,6 @@ observeEvent(input$goButton, {
     values$sWB <- df$WB[input$resTable1_rows_selected]
     values$sPeriod <- df$Period[input$resTable1_rows_selected]
     df <- filter(values$resMC, WB == values$sWB, Period == values$sPeriod)
-    if (!input$IgnoreErr) {
-      df <-ClearErrorValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
-    if (!input$ShowExtrap) {
-      df <-ClearExtrapValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
     
     
     res2MC <-
@@ -946,12 +897,7 @@ observeEvent(input$goButton, {
                 level = 2) %>%
       rename(ClassMC = Class, EQRMC = EQR)
     df <- filter(values$resAvg, WB == values$sWB, Period == values$sPeriod)
-    if (!input$IgnoreErr) {
-      df <- ClearErrorValues(df, varList = c("EQR", "Class"))
-    }
-    if (!input$ShowExtrap) {
-      df <-ClearExtrapValues(df, varList = c("EQR", "Class"))
-    }
+
     res2Avg <-
       Aggregate(df,
                 Groups = c("WB", "Period", "Type"),
@@ -974,14 +920,7 @@ observeEvent(input$goButton, {
              WB == values$sWB,
              Period == values$sPeriod,
              QEtype == values$sQEtype)
-    if (!input$IgnoreErr) {
-      df <-
-        ClearErrorValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
-    if (!input$ShowExtrap) {
-      df <-
-        ClearExtrapValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
+ 
     res3MC <-
       Aggregate(df,
                 Groups = c("WB", "Period", "Type", "sim"),
@@ -993,12 +932,7 @@ observeEvent(input$goButton, {
              WB == values$sWB,
              Period == values$sPeriod,
              QEtype == values$sQEtype)
-    if (!input$IgnoreErr) {
-      df <- ClearErrorValues(df, varList = c("EQR", "Class"))
-    }
-    if (!input$ShowExtrap) {
-      df <- ClearExtrapValues(df, varList = c("EQR", "Class"))
-    }
+
     res3Avg <-
       Aggregate(df,
                 Groups = c("WB", "Period", "Type"),
@@ -1023,14 +957,7 @@ observeEvent(input$goButton, {
       QEtype == values$sQEtype,
       QualityElement == values$sQualityElement
     )
-    if (!input$IgnoreErr) {
-      df <-
-        ClearErrorValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
-    if (!input$ShowExtrap) {
-      df <-
-        ClearExtrapValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
+
     res4MC <-
       Aggregate(df,
                 Groups = c("WB", "Period", "Type", "sim"),
@@ -1044,14 +971,7 @@ observeEvent(input$goButton, {
       QEtype == values$sQEtype,
       QualityElement == values$sQualityElement
     )
-    if (!input$IgnoreErr) {
-      df <-
-        ClearErrorValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
-    if (!input$ShowExtrap) {
-      df <-
-        ClearExtrapValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
+
     res4Avg <-
       Aggregate(df,
                 Groups = c("WB", "Period", "Type"),
@@ -1071,14 +991,7 @@ observeEvent(input$goButton, {
       df$QualitySubelement[input$resTable4_rows_selected]
     
     df <- values$resMC
-    if (!input$IgnoreErr) {
-      df <-
-        ClearErrorValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
-    if (!input$ShowExtrap) {
-      df <-
-        ClearExtrapValues(df, varList = c("EQR", "Class", "ClassAvg", "EQRavg"))
-    }
+ 
     
     values$resInd <- filter(
       df,
