@@ -17,19 +17,10 @@ shinyUI(
     dashboardSidebar(
       sidebarMenuOutput(outputId = "dy_menu")),
     dashboardBody(
-      
-      #shinyjs::useShinyjs(),
-      #js function to reset a button, variableName is the button name whose value we want to reset
-      #tags$script("Shiny.addCustomMessageHandler('resetInputValue', function(variableName){
-      #            Shiny.onInputChange(variableName, null);
-      #            });
-      #            "),  
+    
       
       tags$head(tags$style(HTML("td.small{width:10px;}"))),
-      #tags$script("$(document).on('click', '#dtind button', function () {
-      #              Shiny.onInputChange('lastClickId',this.id);
-      #              Shiny.onInputChange('lastClick', Math.random())
-  #});"),
+ 
       
       tags$script(HTML("Shiny.addCustomMessageHandler('unbind-DT', function(id) {
                        Shiny.unbindAll($('#'+id).find('table').DataTable().table().node());
@@ -96,12 +87,7 @@ shinyUI(
                 h3(textOutput("SelectedWBStatus")),
                 textOutput("SelectedTypeStatus")
                 ),
-                column(width=4,
-
-                        checkboxInput("ShowExtrap", "Show extrapolated results. Check this option to include indicators calculated by extrapolating from results from other waterbodies within same type",
-                                      value = TRUE, width = '100%')
- 
-                )
+                column(width=4,"")
                 ),
 
                 fluidRow(column(width=3,htmlOutput("titleTable1"),DT::dataTableOutput("resTable1")),
@@ -128,9 +114,9 @@ shinyUI(
                 numericInput("n",
                              label = "Number of simulations", min=1,
                              value = 500),
-                 p("Options for Monte Carlo simulations."),
-                h3("Indicator List"),
-                checkboxInput("chkClassBnds","Show Class Boundaries", value=FALSE, width=NULL)
+                 p("Options for Monte Carlo simulations.")#,
+                #h3("Indicator List"),
+                #checkboxInput("chkClassBnds","Show Class Boundaries", value=FALSE, width=NULL)
                #uiOutput("chkIndicators")
                 
         )

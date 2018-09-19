@@ -347,23 +347,17 @@ shinyServer(function(input, output, session) {
       
       df$row<-seq(1,nrow(df),1)
       df$row<-NULL
+      #cat(paste0("Extrap:", paste(paste0("'",df$Extrap,"'"),collapse = ","),"\n"))
       
-      df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = df[,"Selected"],labels=df[,"IndicatorDescription"])
-      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=df[,"Extrap"],labels="",width = '30px')
-      
-      
+      df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = df$Selected,labels=df[,"IndicatorDescription"])
+      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=T,labels="",width = '30px')
+      cat(paste0("names=",names(df),"\n"))
       # reorder_columns
-      #df<-df[c(1,num_col+2,seq(2,num_col-1,1))]      
-      #df<-df[c(1,num_col+2,seq(2,num_col-2,1),num_col+3,num_col+1)]
-      #df<-df[c(1,num_col+1,seq(2,num_col-2,1),num_col+2)]
-      df<-df[c(num_col+1,2,3,num_col+2)]
-      
-      #num_col<-ncol(df)
-      #df[,2:num_col] %>% rename(Indicator=Check)
+      df<-df[c(num_col+1,seq(1:(num_col-3)),num_col+2)]
       df %>% rename(Indicator=Check)
     }
   },server=FALSE, escape=FALSE,selection='single',rownames=F, 
-  options=list(dom = 't',pageLength = 99,autoWidth=TRUE,columnDefs = list(list(targets=c(3),className="small")),
+  options=list(dom = 't',pageLength = 99,autoWidth=TRUE,
                preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
                drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
 }
@@ -427,11 +421,12 @@ shinyServer(function(input, output, session) {
         
         df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
           mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
-          mutate(Data=ifelse(Code=='0',"OK",ifelse(Code=='-1',"<3yrs","-"))) 
-        
+          mutate(Data=ifelse(Code=='0',"OK",ifelse(Code=='-1',"<3yrs","-")),
+                 Code=ifelse(Data=="OK",0,1))
+
           dfext <- df %>% 
             group_by(Indicator) %>% 
-            summarise(sum=sum(Code)) %>%
+            summarise(sum=sum(Code,na.rm=T)) %>%
             ungroup() %>%
             mutate(Extrap=ifelse(sum==0,F,T)) %>%
             select(-sum) 
@@ -458,7 +453,6 @@ shinyServer(function(input, output, session) {
 
 
   output$dtextrap = DT::renderDataTable({
-    #output$btnExtrap <- NULL
 
     df<-values$resAvgType
     if(typeof(df)!="list"){
@@ -475,9 +469,8 @@ shinyServer(function(input, output, session) {
       if(nrow(df)>0){
         df <- df %>% distinct(WB,Name,Include)
 
-        #df$Use<-shinyInput(checkboxInput, nrow(df), 'usestn_', value = df$Include, labels="",width='30px')# labels=df[,"WB"])
-        #df<-df %>% select(WB,Name,Use)
-        df<-df %>% select(WB,Name)
+        df$Use<-shinyInput(checkboxInput, nrow(df), 'usestn_', value = df$Include, labels="",width='30px')# labels=df[,"WB"])
+        df<-df %>% select(WB,Name)#,Use
         values$n_stn_extrap<-nrow(df)
         #output$btnExtrap <- renderUI({
         #  tagList(actionButton("btnExtrap", "Update"))
@@ -487,15 +480,12 @@ shinyServer(function(input, output, session) {
         df<-data.frame()
       }}
     }
-
-
     df
   },server=FALSE, escape=FALSE,selection='single',rownames=F,
   options=list(dom = 't',pageLength = 99,autoWidth=TRUE,
                preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
                drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
-#columnDefs = list(list(targets=c(2),className="small")),
-  
+
    
    
    listIndicators <- function(){
@@ -820,17 +810,17 @@ observeEvent(input$goButton, {
   observeEvent(values$resMC, {
     if (nrow(values$resMC) > 0) {
       #str(paste0("dfMC updated n=", nrow(values$resMC)))
-      if (input$chkClassBnds == TRUE) {
+      #if (input$chkClassBnds == TRUE) {
         grplist <- c(
           "WB","Type","Period","QEtype","QualityElement","QualitySubelement","Indicator","IndSubtype",
           "Note","Unit","Months","Worst","PB","MP","GM","HG","Ref","Mean","StdErr","EQR","Class"
         )
-      } else{
-        grplist <- c(
-          "WB","Type","Period","QEtype","QualityElement","QualitySubelement",
-          "Indicator","IndSubtype","Note","Unit","Months","Mean","StdErr","EQR","Class"
-        )
-      }
+      #} else{
+      #  grplist <- c(
+      #    "WB","Type","Period","QEtype","QualityElement","QualitySubelement",
+      #    "Indicator","IndSubtype","Note","Unit","Months","Mean","StdErr","EQR","Class"
+      #  )
+      #}
       
       df <-
         values$resMC %>% rename(
