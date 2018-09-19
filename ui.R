@@ -86,10 +86,14 @@ shinyUI(
                 textOutput("SelectedTypeStatus")
                 ),
                 column(width=4,
-                         #h3("Indicator Errors"),
-                    checkboxInput("IgnoreErr", "Ignore indicator minimum year count", value = FALSE, width = NULL),
-                    p("Check this option to include indicators which otherwise would be ignored because they don't meet the requirements for number of years with data.")
-                  )
+
+                        checkboxInput("ShowExtrap", "Show extrapolated results. Check this option to include indicators calculated by extrapolating from results from other waterbodies within same type",
+                                      value = TRUE, width = '100%'),
+ 
+                       checkboxInput("IgnoreErr", "Show all data for selected waterbody. Check this option to include indicators for this waterbody which otherwise would be ignored because they don't meet the requirements for number of years with data.",
+                                     value = FALSE, width = '100%'),
+                    p("The two options are mutually exclusive.")
+                )
                 ),
 
                 fluidRow(column(width=3,htmlOutput("titleTable1"),DT::dataTableOutput("resTable1")),

@@ -83,11 +83,21 @@ ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
 #
 ClearErrorValues <- function(df,checkvar="Code",OKvalue=0,varList=c("EQR","Class","pGES")){
   for(var in varList){
-    df[df[,checkvar]!=0,var]<-NA
+    df[df[,checkvar]!=OKvalue,var]<-NA
+    #df[!df[,checkvar] %in% OKvalue,var]<-NA
   }
   return(df)
 }
 
+# ClearExtrapValues
+#
+#
+ClearExtrapValues <- function(df,checkvar="Note",matchvalue="Extrap",varList=c("EQR","Class","pGES")){
+  for(var in varList){
+    df[df[,checkvar] %in% matchvalue,var]<-NA
+  }
+  return(df)
+}
 
 # ClassObsTableDT
 #
