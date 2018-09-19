@@ -26,10 +26,14 @@ shinyUI(
       #            "),  
       
       tags$head(tags$style(HTML("td.small{width:10px;}"))),
-      tags$script("$(document).on('click', '#dtind button', function () {
-                    Shiny.onInputChange('lastClickId',this.id);
-                    Shiny.onInputChange('lastClick', Math.random())
-  });"),
+      #tags$script("$(document).on('click', '#dtind button', function () {
+      #              Shiny.onInputChange('lastClickId',this.id);
+      #              Shiny.onInputChange('lastClick', Math.random())
+  #});"),
+      
+      tags$script(HTML("Shiny.addCustomMessageHandler('unbind-DT', function(id) {
+                       Shiny.unbindAll($('#'+id).find('table').DataTable().table().node());
+                       })")),
       
       
       tabItems(
@@ -70,16 +74,18 @@ shinyUI(
                h3(textOutput("SelectedWB")),
                fluidRow(column(9,textOutput("SelectedType"))),
                fluidRow(column(4,uiOutput("selectPressure")),
-                        column(2,h2(" "),uiOutput("goButton")),
-                        column(1,h2(" "),
-                               checkboxInput("IgnoreErr", 
-                                             "Use all data",
-                                              value = FALSE, width = '100%')),
-                        column(3,h2(" "),
-                               p("Use all data for the selected waterbody, including indicators which have data for fewer than 3 out of 6 years.")#,
+                        column(2,h1(" "),uiOutput("goButton")),
+                        column(4,h1(" "),checkboxInput("IgnoreErr", 
+                                             "Use all data. For for the selected waterbody, use indicators which have data for fewer than 3 out of 6 years.",
+                                              value = FALSE, width = '100%')#,
+                               #p("Use all data for the selected waterbody, including indicators which have data for fewer than 3 out of 6 years.")#,
                         #column(1,h2(" "),uiOutput("btnExtrap"))
                         )),
-               fluidRow(column(7,DT::dataTableOutput("dtind")),
+               fluidRow(column(7,h4("Indicator availability")),
+                        column(3,h4("WBs for extrapolation:"))
+               ),
+               fluidRow(column(7,DT::dataTableOutput("dtind")
+                               ),
                         column(3,DT::dataTableOutput("dtextrap"))
                )
                ),

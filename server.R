@@ -319,7 +319,7 @@ shinyServer(function(input, output, session) {
     if(values$wbselected==""){
       ""
     }else{
-      if(nrow(listIndicators())==0){
+      if(countIndicators()==0){
         ""
       }else{
         tagList(actionButton("goButton", "Calculate Status"))
@@ -332,7 +332,12 @@ shinyServer(function(input, output, session) {
   
   # --------------- update indicator information / selection ----------------
   
-
+  #tags$script(HTML("Shiny.addCustomMessageHandler('unbind-DT', function(id) {
+  #        Shiny.unbindAll($('#'+id).find('table').DataTable().table().node());
+  # })"))
+  
+  
+  updatedtind<-function(){
   output$dtind = DT::renderDataTable({
     df<-values$df_ind_status
     if(typeof(df)!="list"){
@@ -344,23 +349,26 @@ shinyServer(function(input, output, session) {
       df$row<-NULL
       
       df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = df[,"Selected"],labels=df[,"IndicatorDescription"])
-      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=FALSE,labels="",width = '30px')
+      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=df[,"Extrap"],labels="",width = '30px')
       
       
       # reorder_columns
       #df<-df[c(1,num_col+2,seq(2,num_col-1,1))]      
       #df<-df[c(1,num_col+2,seq(2,num_col-2,1),num_col+3,num_col+1)]
-      df<-df[c(1,num_col+1,seq(2,num_col-2,1),num_col+2)]
+      #df<-df[c(1,num_col+1,seq(2,num_col-2,1),num_col+2)]
+      df<-df[c(num_col+1,2,3,num_col+2)]
       
-      num_col<-ncol(df)
-      df[,2:num_col] %>% rename(Indicator=Check)
+      #num_col<-ncol(df)
+      #df[,2:num_col] %>% rename(Indicator=Check)
+      df %>% rename(Indicator=Check)
     }
   },server=FALSE, escape=FALSE,selection='single',rownames=F, 
   options=list(dom = 't',pageLength = 99,autoWidth=TRUE,columnDefs = list(list(targets=c(3),className="small")),
                preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
                drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
+}
   
-  
+
   UpdateIndTable<-function(){
       # Get the info on the status for the indicators
       bOK<-TRUE
@@ -407,14 +415,6 @@ shinyServer(function(input, output, session) {
         #incProgress(0.2)
         dbDisconnect(db)
         
-        # # Get distinct indicator + subtype for the selected WB
-        # # use this to match with indicator/subtype combinations from dftypeperiod
-        # 
-        # sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,
-        #             "' and Indicator in (",indlist,") AND WB ='", values$wbselected,"'")
-        # dfindsub<-readdb(dbpath, sql)
-        # dfindsub<-dfindsub %>% distinct(Indicator,IndSubtype)
-        
         dftypeperiod<-CleanSubTypes(dftypeperiod)
         
         dfwb_type <- dfwb_lan %>% distinct(WB_ID,Name)
@@ -427,10 +427,20 @@ shinyServer(function(input, output, session) {
         
         df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
           mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
-          mutate(Data=ifelse(Code=='0',"OK",ifelse(Code=='-1',"<3yrs","-"))) %>%
+          mutate(Data=ifelse(Code=='0',"OK",ifelse(Code=='-1',"<3yrs","-"))) 
+        
+          dfext <- df %>% 
+            group_by(Indicator) %>% 
+            summarise(sum=sum(Code)) %>%
+            ungroup() %>%
+            mutate(Extrap=ifelse(sum==0,F,T)) %>%
+            select(-sum) 
+          
+        df <- df %>% 
           select(-Code) %>%
           spread(key="Period",value="Data") %>%
-          left_join(select(dfind,Indicator,IndicatorDescription),by="Indicator")
+          left_join(select(dfind,Indicator,IndicatorDescription),by="Indicator") %>%
+          left_join(dfext,by=c("Indicator")) 
 
         df<-dforder %>% left_join(df,by="Indicator") %>% mutate(Selected=TRUE)
         
@@ -441,7 +451,9 @@ shinyServer(function(input, output, session) {
         values$df_ind_status <-""
         values$resAvgType <-""
       }
-  }
+
+      updatedtind()
+      }
 
 
 
@@ -506,6 +518,26 @@ shinyServer(function(input, output, session) {
      return(df)   
    }
    
+   countIndicators<-function(){
+     dfi<-values$df_ind_status
+     if(typeof(dfi)!="list"){
+       n<-0
+     }else{
+       ni<-nrow(dfi)
+       if(ni>0){
+         df<-data.frame(
+           Indicator=dfi$Indicator,
+           Select=shinyValue('ind_',ni))
+        df<-df %>% filter(Select==T)
+        n<-nrow(df)
+       }else{
+         n<-0
+       }
+     }
+     return(n)   
+   }
+   
+   
    # listStations <- function(){
    #   indicator<-values$dtcurrentindicator
    #   df<-values$resAvgType
@@ -543,8 +575,13 @@ observeEvent(input$goButton, {
   #df<-listIndicators()
   withProgress(message = 'Calculating...', value = 0, {
     df<- listIndicators()
+    df <- df %>% filter(Select==T)
     IndList <- df$Indicator
-    cat(paste0(IndList,"\n"))
+    df <- df %>% filter(Extrapolate==T) # df now contains only indicators to be extrapolated
+    ExtrapList <- df$Indicator
+    cat(paste0("Indicator list:", paste(paste0("'",IndList,"'"),collapse = ","),"\n"))
+    cat(paste0("Extrap list:", paste(paste0("'",ExtrapList,"'"),collapse = ","),"\n"))
+    
     cat(paste0(df,"\n"))
    
     nSimMC <- input$n
@@ -553,6 +590,7 @@ observeEvent(input$goButton, {
     IndList<-paste(paste0("'",IndList,"'"),collapse = ",")
     periodlist<-paste(paste0("'",values$periodselected,"'"),collapse = ",")
     wblist<-paste(paste0("'",values$wbselected,"'"),collapse = ",")
+
 
  
   # Get results for the waterbody we are showing results for   
@@ -589,6 +627,8 @@ observeEvent(input$goButton, {
     }
     
     dfextrap<-values$resAvgType
+    dfextrap<- df %>% left_join(dfextrap,by="Indicator")
+    
     dfmatch<-resAvg %>% 
       filter(Code %in% matchcode) %>% 
       select(Period,Indicator) %>%
