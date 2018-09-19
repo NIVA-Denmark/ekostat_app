@@ -62,7 +62,7 @@ ClassOutputTableDT<-function(df,ClassVar="Class",Groups="",
           formatStyle(
             columns = colOK,
             #backgroundColor = styleEqual(c(0, -1,-90,-91), c('', 'yellow', 'yellow', 'yellow'))
-            backgroundColor = styleEqual(c("OK","data<3yrs","missing","missing"), c('', 'yellow', 'red', 'red'))
+            backgroundColor = styleEqual(c("Extrap","OK","data<3yrs","missing","missing"), c('grey20','', 'yellow', 'red', 'red'))
           )
       }
       dt<-dt %>% spk_add_deps()
@@ -151,7 +151,7 @@ GetVarNames<-function(indicator){
     df.indicators<-ReadIndicatorType()
     df.indicators<-df.indicators %>% filter(Indicator==indicator)
     obsvar<-as.character(df.indicators[1,"Parameter"])
-    if(indicator=="Oxygen"){
+    if(indicator %in% c("CoastOxygen")){
       varlist<-c("depth","sali",obsvar)
     }else{
       varlist<-c("sali",obsvar)

@@ -24,7 +24,7 @@ Aggregate<-function(df,level=1,Groups="",QE_use_mean=c("Supporting")){
   
   # QE_use_mean - list of QE "groups" e.g. "Supporting"
   #               within this group, the status is calculated from the mean of EQR for Quality Elements
-  #               for other groups (e.g. "Biological"), status is calculated from the lowest EQR of Qulaity Elements (OOAO)
+  #               for other groups (e.g. "Biological"), status is calculated from the lowest EQR of Quality Elements (OOAO)
   
   GroupsType<-c(Groups,"QEtype")
   GroupsQE<-c(Groups,"QualityElement","QEtype")

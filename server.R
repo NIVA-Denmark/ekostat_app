@@ -13,6 +13,7 @@ library(magrittr)
 source("ReadIndicatorType.R")
 source("classoutputtable.R")
 source("Aggregation.R")
+source("Assessment.R")
 source("helpfunctions.R")
 source("extrapolation.R")
 
@@ -612,15 +613,14 @@ observeEvent(input$goButton, {
 
     resAvgExtrap<-resExtrap$dfAvg
     
-     if(nrow(resAvgExtrap)>0){
+    if(nrow(resAvgExtrap)>0){
     resAvgExtrap<-resAvgExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
     namelist<-paste(paste0("'",names(resAvgExtrap),"'"),collapse = ",")
-    cat(paste("1\n names=",namelist,"nrows=",nrow(resAvgExtrap),"\n"))
 
     resAvgExtrap<-resAvgExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
     resAvgExtrap<-resAvgExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype"))
     resAvgExtrap<-resAvgExtrap %>%rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") 
-    resAvgExtrap<-resAvgExtrap %>%select(WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+    resAvgExtrap<-resAvgExtrap %>%select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
              Months,Unit,Worst,PB,MP,GM,HG,Ref,Mean,StdErr,Code,Note) %>%
       mutate(Worst=as.numeric(Worst),
              PB=as.numeric(PB),
@@ -635,7 +635,7 @@ observeEvent(input$goButton, {
     resMCExtrap<-resMCExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
     resMCExtrap<-resMCExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype")) %>%
       rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") %>%
-      select(WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+      select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
              Months,Unit,Worst,PB,MP,GM,HG,Ref,sim,Value,Code,Note)%>%
       mutate(Worst=as.numeric(Worst),
              PB=as.numeric(PB),
@@ -644,22 +644,35 @@ observeEvent(input$goButton, {
              HG=as.numeric(HG),
              Ref=as.numeric(Ref))
     
-    resList<-list(resAvg=resAvg,resAvgExtrap=resAvgExtrap,resMC=resMC[1:100,],resMCExtrap=resMCExtrap[1:100,])
-    save(resList,file="resList.Rda")
-    cat("6\n")
+    
+    cat("4\n")
+    resAvgExtrap<-resAvgExtrap %>% mutate(Value=Mean)
+    resAvgExtrap<-GetClass(resAvgExtrap)
+    cat("5\n")
+    resMCExtrap<-GetClass(resMCExtrap)
+    freq<-Frequency(resMCExtrap,Groups=c("Period","Indicator","IndSubtype"),varname="ClassID") %>%
+      rename(fBad=C1,fPoor=C2,fMod=C3,fGood=C4,fHigh=C5)
+    resAvgExtrap<-resAvgExtrap %>% left_join(freq,by=c("Period","Indicator","IndSubtype"))
+        
+    resMCExtrap<-resMCExtrap %>% left_join(select(resAvgExtrap,WB,Period,Indicator,IndSubtype,Mean,StdErr,EQRavg=EQR,ClassAvg=Class),
+                                           by=c("WB","Period","Indicator","IndSubtype"))
+    #resList<-list(resAvg=resAvg,resAvgExtrap=resAvgExtrap,resMC=resMC[seq(1,1000,10),],resMCExtrap=resMCExtrap[seq(1,1000,10),],freq)
+    #save(resList,file="resList.Rda")
+    #cat("6\n")
+    
     #filter out the results which will be replaced by extrapolated results
-    # dfmatch<-resAvgExtrap %>% 
-    #   filter(Code==0,!is.na(Mean)) %>% 
+    # dfmatch<-resAvgExtrap %>%
+    #   filter(Code==0,!is.na(Mean)) %>%
     #   select(Period,Indicator) %>%
     #   mutate(OK=1)
     # 
-    # resAvg<-resAvg %>% 
-    #   left_join(dfmatch,by=c("Period","Indicator")) %>% 
+    # resAvg<-resAvg %>%
+    #   left_join(dfmatch,by=c("Period","Indicator")) %>%
     #   filter(is.na(OK)) %>%
     #   select(-OK)
     # 
-    # resMC<-resMC %>% 
-    #   left_join(dfmatch,by=c("Period","Indicator")) %>% 
+    # resMC<-resMC %>%
+    #   left_join(dfmatch,by=c("Period","Indicator")) %>%
     #   filter(is.na(OK)) %>%
     #   select(-OK)
     
@@ -675,6 +688,9 @@ observeEvent(input$goButton, {
       resAvg <- ClearExtrapValues(resAvg, varList = c("EQR", "Class"))
     }
     
+    resList<-list(resAvg=resAvg,resMC=resMC)
+    save(resList,file="resList.Rda")
+    cat("6\n")
     #save(resExtrap,file="resList.Rda")
     }#if(nrow(resAvgExtrap)>0)
     incProgress(0.1,message="aggregating results")
@@ -835,7 +851,7 @@ observeEvent(input$goButton, {
     if(input$IgnoreErr && input$ShowExtrap){
       updateCheckboxInput(session,"IgnoreErr", value = 0)
     }
-    
+    ShowHideExtrapErrs()
   })
   
   observeEvent(input$IgnoreErr, {
