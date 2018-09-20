@@ -75,8 +75,6 @@ extrapolation<-function(dfextrap,dfbnds,nsim,resYr,resAvg,resMC){
   listperiod<-dfperiod %>% split(list(.$Indicator,.$Period))
   listyr<-dfyear %>% split(list(.$Indicator,.$Period))
   listMC<-dfMC %>% split(list(.$Indicator,.$Period))
-  extrap_input<-list(dfextrap,listperiod,listyr,listMC)
-  save(extrap_input,file="extrap_input.Rda")
   listres<-pmap(list(listperiod,listyr,listMC),extrapolation_single,dfbnds,nsim)
   
   dfAvg<-map_dfr(listres, "resAvg")

@@ -83,11 +83,12 @@ shinyUI(
    
         # tab content
         tabItem(tabName = "status",
-                fluidRow(column(width=8,
-                h3(textOutput("SelectedWBStatus")),
-                textOutput("SelectedTypeStatus")
+                fluidRow(column(width=4,
+                                h3(textOutput("SelectedWBStatus")),
+                                textOutput("SelectedTypeStatus")
                 ),
-                column(width=4,"")
+                column(width=4,h1(" "),uiOutput("download"))
+                #column(width=4,h1(" "),downloadButton("downloadButton"))
                 ),
 
                 fluidRow(column(width=3,htmlOutput("titleTable1"),DT::dataTableOutput("resTable1")),
