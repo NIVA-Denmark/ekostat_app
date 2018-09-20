@@ -9,7 +9,7 @@ library(sparkline)
 library(RSQLite)
 library(data.table)
 library(magrittr)
-library(rmarkdown)
+
 
 source("ReadIndicatorType.R")
 source("classoutputtable.R")
@@ -1177,8 +1177,8 @@ observeEvent(input$goButton, {
     }
     
     if (typeof(values$resObs)!="list") {
-      plotHeight<-1
-      plotWidth<-1
+      plotHeight<-5
+      plotWidth<-5
     }else{
       plotHeight<-400
       plotWidth<-600
