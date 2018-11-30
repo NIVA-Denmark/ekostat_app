@@ -35,7 +35,7 @@ shinyServer(function(input, output, session) {
   
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
-  dbpath<-"data/ekostat.db"
+  dbpath<-"../efs/ekostat/ekostat.db"
   
   dfind<-ReadIndicatorType()
   dfvar<-ReadVariances()
