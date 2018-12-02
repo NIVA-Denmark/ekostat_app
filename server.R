@@ -368,8 +368,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  
-  
+
   
   # --------------- update indicator information / selection ----------------
   
@@ -408,12 +407,13 @@ shinyServer(function(input, output, session) {
     
       # Get the info on the status for the indicators
       bOK<-TRUE
-      db <- dbConnect(SQLite(), dbname=dbpath)
       
+      #db <- dbConnect(SQLite(), dbname=dbpath)
       sql<-paste0("SELECT * FROM resAvg WHERE WB ='",values$wbselected,"'")
-      df <- dbGetQuery(db, sql)
-      dbDisconnect(db)
-      
+      #df <- dbGetQuery(db, sql)
+      #dbDisconnect(db)
+      #browser()
+      df <- readdb(dbpath,sql)
       df<-CleanSubTypes(df)
       
       
@@ -470,9 +470,7 @@ shinyServer(function(input, output, session) {
         dftypeperiod<- df2 %>% left_join(dftypeperiod,by=c("Indicator","Period")) %>%
           filter(!is.na(Mean))
         
-        if(nrow(dftypeperiod)>0){
         
-        dftypeperiod$Include<-T
         
         df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
           mutate(Code=ifelse(is.na(Code),-99,Code)) %>%
@@ -485,7 +483,7 @@ shinyServer(function(input, output, session) {
             ungroup() %>%
             mutate(Extrap=ifelse(sum==0,F,T)) %>%
             select(-sum) 
-          cat("3\n")
+          
         df <- df %>% 
           select(-Code) %>%
           spread(key="Period",value="Data") %>%
@@ -495,9 +493,10 @@ shinyServer(function(input, output, session) {
         df<-dforder %>% left_join(df,by="Indicator") %>% mutate(Selected=TRUE)
         
         values$df_ind_status <- df
-        values$resAvgType <-dftypeperiod
+        if(nrow(dftypeperiod)>0){
+          dftypeperiod$Include<-T
+          values$resAvgType <-dftypeperiod
         }else{
-          values$df_ind_status <-""
           values$resAvgType <-""
         }
         }else{
@@ -628,7 +627,7 @@ shinyServer(function(input, output, session) {
 observeEvent(input$goButton, {
   start.time <- Sys.time()
   #df<-listIndicators()
-  #browser()
+  browser()
   withProgress(message = 'Calculating...', value = 0, {
     df<- listIndicators()
     df <- df %>% filter(Select==T)
@@ -680,19 +679,25 @@ observeEvent(input$goButton, {
     }else{
       matchcode<-c(0)
     }
-    
+
     dfextrap<-values$resAvgType
-    dfextrap<- df %>% left_join(dfextrap,by="Indicator")
+    if(dfextrap!=""){
+    dfextrap<- df %>% 
+      left_join(dfextrap,by="Indicator") %>%
+      filter(!is.na(WB))
+    #? filter where 
     
     dfmatch<-resAvg %>% 
       filter(Code %in% matchcode) %>% 
       select(Period,Indicator) %>%
-      mutate(OK=1)
+      mutate(OK=1) 
     dfextrap<-dfextrap %>% 
       left_join(dfmatch,by=c("Period","Indicator"))
     dfextrap<-dfextrap %>% 
       filter(is.na(OK)) %>%
       select(WB,Indicator,Period,Type)
+    
+    
     # this is the list of indicators available from extrapolation stations which 
     # do NOT have a result for the WB we are considering
 
@@ -711,22 +716,23 @@ observeEvent(input$goButton, {
                 ") AND Indicator IN (",IndList,") AND sim <= ",nSimMC)
     resMCtype <- dbGetQuery(db, sql)
     incProgress(0.1)
-    dbDisconnect(db)    
+    dbDisconnect(db)
+    
     #function(dfextrap,dfbnds,nsim,resYr,resAvg,resMC){
     resExtrap<-extrapolation(dfextrap,dfbounds,input$n,resYrtype,resAvgtype,resMCtype)
-
+    
     resAvgExtrap<-resExtrap$dfAvg
     
     if(nrow(resAvgExtrap)>0){
-    resAvgExtrap<-resAvgExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
-    namelist<-paste(paste0("'",names(resAvgExtrap),"'"),collapse = ",")
+      resAvgExtrap<-resAvgExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
+      namelist<-paste(paste0("'",names(resAvgExtrap),"'"),collapse = ",")
 
-    resAvgExtrap<-resAvgExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
-    resAvgExtrap<-resAvgExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype"))
-    resAvgExtrap<-resAvgExtrap %>%rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") 
-    resAvgExtrap<-resAvgExtrap %>%select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+      resAvgExtrap<-resAvgExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
+      resAvgExtrap<-resAvgExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype"))
+      resAvgExtrap<-resAvgExtrap %>%rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") 
+      resAvgExtrap<-resAvgExtrap %>%select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
              Months,Unit,Worst,PB,MP,GM,HG,Ref,Mean,StdErr,Code,Note) %>%
-      mutate(Worst=as.numeric(Worst),
+        mutate(Worst=as.numeric(Worst),
              PB=as.numeric(PB),
              MP=as.numeric(MP),
              GM=as.numeric(GM),
@@ -735,50 +741,55 @@ observeEvent(input$goButton, {
              #Region=region,Typename=typename)
 
         resMCExtrap<-resExtrap$dfMC
-    resMCExtrap<-resMCExtrap %>% mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
-    resMCExtrap<-resMCExtrap %>% left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
-    resMCExtrap<-resMCExtrap %>% left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype")) %>%
-      rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") %>%
-      select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
-             Months,Unit,Worst,PB,MP,GM,HG,Ref,sim,Value,Code,Note)%>%
-      mutate(Worst=as.numeric(Worst),
+        resMCExtrap<-resMCExtrap %>% 
+          mutate(WB=values$wbselected,Type=values$typeselected,Note="Extrap",Code=0)
+         resMCExtrap<-resMCExtrap %>% 
+           left_join(select(dfind,Indicator,QEtype,QualityElement,QualitySubelement),by=c("Indicator"))
+        resMCExtrap<-resMCExtrap %>% 
+          left_join(rename(dfbounds,IndSubtype=Depth_stratum),by=c("Type","Indicator","IndSubtype")) %>%
+          rename(Ref=RefCond,HG="H.G",GM="G.M",MP="M.P",PB="P.B") %>%
+          select(Water_type,WB,Region,Type,Typename,Period,QEtype,QualityElement,QualitySubelement,Indicator,IndSubtype,
+             Months,Unit,Worst,PB,MP,GM,HG,Ref,sim,Value,Code,Note) %>%
+          mutate(Worst=as.numeric(Worst),
              PB=as.numeric(PB),
              MP=as.numeric(MP),
              GM=as.numeric(GM),
              HG=as.numeric(HG),
              Ref=as.numeric(Ref))
     
-    resAvgExtrap<-resAvgExtrap %>% mutate(Value=Mean)
-    resAvgExtrap<-GetClass(resAvgExtrap)
-
-    resMCExtrap<-GetClass(resMCExtrap)
-    freq<-Frequency(resMCExtrap,Groups=c("Period","Indicator","IndSubtype"),varname="ClassID") %>%
-      rename(fBad=C1,fPoor=C2,fMod=C3,fGood=C4,fHigh=C5)
-    resAvgExtrap<-resAvgExtrap %>% left_join(freq,by=c("Period","Indicator","IndSubtype"))
-        
-    resMCExtrap<-resMCExtrap %>% left_join(select(resAvgExtrap,WB,Period,Indicator,IndSubtype,Mean,StdErr,EQRavg=EQR,ClassAvg=Class),
-                                           by=c("WB","Period","Indicator","IndSubtype"))
+      resAvgExtrap<-resAvgExtrap %>% mutate(Value=Mean)
+      resAvgExtrap<-GetClass(resAvgExtrap)
+  
+      resMCExtrap<-GetClass(resMCExtrap)
+      freq<-Frequency(resMCExtrap,Groups=c("Period","Indicator","IndSubtype"),varname="ClassID") %>%
+        rename(fBad=C1,fPoor=C2,fMod=C3,fGood=C4,fHigh=C5)
+      resAvgExtrap<-resAvgExtrap %>% left_join(freq,by=c("Period","Indicator","IndSubtype"))
+          
+      resMCExtrap<-resMCExtrap %>% left_join(select(resAvgExtrap,WB,Period,Indicator,IndSubtype,Mean,StdErr,EQRavg=EQR,ClassAvg=Class),
+                                             by=c("WB","Period","Indicator","IndSubtype"))
    
     #filter out the results which will be replaced by extrapolated results
-     dfmatch<-resAvgExtrap %>%
-       filter(Code==0,!is.na(Mean)) %>%
-       select(Period,Indicator) %>%
-       mutate(OK=1)
+       dfmatch<-resAvgExtrap %>%
+         filter(Code==0,!is.na(Mean)) %>%
+         select(Period,Indicator) %>%
+         mutate(OK=1)
      
-     resAvg<-resAvg %>%
-       left_join(dfmatch,by=c("Period","Indicator")) %>%
-       filter(is.na(OK)) %>%
-       select(-OK)
+       resAvg<-resAvg %>%
+         left_join(dfmatch,by=c("Period","Indicator")) %>%
+         filter(is.na(OK)) %>%
+         select(-OK)
      
-     resMC<-resMC %>%
-       left_join(dfmatch,by=c("Period","Indicator")) %>%
-       filter(is.na(OK)) %>%
-       select(-OK)
+       resMC<-resMC %>%
+         left_join(dfmatch,by=c("Period","Indicator")) %>%
+         filter(is.na(OK)) %>%
+         select(-OK)
     
-    resAvg<-resAvg %>% bind_rows(resAvgExtrap)
-    resMC<-resMC %>% bind_rows(resMCExtrap)
+      resAvg<-resAvg %>% bind_rows(resAvgExtrap)
+      resMC<-resMC %>% bind_rows(resMCExtrap)
     
     }#if(nrow(resAvgExtrap)>0)
+  } #if no extraploation data
+    
     incProgress(0.1,message="aggregating results")
     #-----------------------------------------------------------------------
     values$resAvg <- resAvg

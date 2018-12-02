@@ -1,6 +1,7 @@
 
 extrapolation_single<-function(dfavg,dfyr,dfMC,dfbnds,nsim){
   require(dplyr)
+  #browser()
   
   resMC<-data.frame(Indicator=c(NA),IndSubtype=c(NA),Period=c(NA),sim=c(NA),Value=c(NA),stringsAsFactors=F)
   resAvg<-data.frame(Indicator=c(NA),IndSubtype=c(NA),Period=c(NA),Mean=c(NA),stringsAsFactors=F)
@@ -32,7 +33,7 @@ extrapolation_single<-function(dfavg,dfyr,dfMC,dfbnds,nsim){
       wbs<-dfavg %>% distinct(WB)
       ntype<-nrow(wbs)
       un<-NULL
-      for(wb in wbs){
+      for(wb in wbs$WB){
         ix<-ix+1
         datperiod<-dfavg %>% filter(WB==wb) %>%
           select(mean=Mean,stderr=StdErr) 
@@ -42,10 +43,11 @@ extrapolation_single<-function(dfavg,dfyr,dfMC,dfbnds,nsim){
           select(Value) %>% as.list()
         uni<-list(period=datperiod,annual=datannual,indicator_sim=indicator_sim$Value,result_code=0)
         if(ix==1){
-          un<-list(uni)
-        }else{
+          un<-list()
+        }#else{
           un[[ix]]<-uni
-        }}
+        #}
+        }
       
       df<-CalculateIndicatorType(indicator,un,var_list,ntype,yrfrom,yrto,n_iter=nsim)
 
