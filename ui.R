@@ -41,16 +41,19 @@ shinyUI(
                   column(3,
                          uiOutput("selectPeriod")),
                   column(3,
-                         "")
+                         checkboxInput("HideWB", 
+                                       "Hide WBs with no data.",
+                                       value = FALSE, width = '100%')
+                         )
                 ),
-                fluidRow(column(10, offset = 1,
+                fluidRow(column(10, offset = 0,
                                 #box(
                                 #  title = "Title 1", width=10,solidHeader = TRUE, status = "primary",
                                   DT::dataTableOutput("dtwb")
                                 #),
             )),
             fluidRow(
-              column(10, offset = 1,
+              column(10, offset = 0,
                      h4(textOutput("wb_info")))
               ),
             fluidRow(

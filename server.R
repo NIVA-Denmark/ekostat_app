@@ -36,7 +36,7 @@ shinyServer(function(input, output, session) {
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
   dbpath<-"../efs/ekostat/ekostat.db"
-  
+  dbpath<-"../ekostat_calc/output/ekostat_coast.db"
   dfind<-ReadIndicatorType()
   dfvar<-ReadVariances()
   dfbounds<-ReadBounds()
@@ -73,19 +73,26 @@ shinyServer(function(input, output, session) {
   values$resMCType <-""
   values$IndSelection<-""
   
-  dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan") %>%
-    mutate(TypeName = Type) %>%
-    mutate(Type = substr(Type,1,3)) %>%
-    mutate(Type = gsub(" ","",Type)) %>%
-    mutate(Type = gsub("\\.","",Type)) %>%
-    mutate(Type = gsub(":","",Type)) %>%
-    mutate(TypeNum = gsub("n",".0",Type)) %>%
-    mutate(TypeNum = gsub("s",".5",TypeNum))
-  dfwb_lan$TypeNum <- as.numeric(dfwb_lan$TypeNum)
+  dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan")   # matching Län and WB_ID
+  dfwb_mun <- readdb(dbpath, "SELECT * FROM WB_Mun")   # matching Kommune and WB_ID
+  dfwb_info <- readdb(dbpath, "SELECT * FROM WB_info") # type info WB_ID
+  wb <- readdb(dbpath, "SELECT * FROM WB")             # available assessments
   
+  dfwb_info <- dfwb_info %>%
+    inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
   
   pressure_list<-function(){
-    c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
+    list<-c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
+    list<-gsub(" ",".",list)
+    df<-dfind[,c("Water_type",list)]
+    df<-df %>% 
+      filter(Water_type==values$watertypeselected)%>% 
+      gather(key="Pressure",value="value",list2) %>%
+      filter(value=="X") %>%
+      distinct(Pressure)
+    list<-df$Pressure
+    list<-gsub("\\."," ",list)
+    return(list)
   }
   
   # rounding results
@@ -99,14 +106,10 @@ shinyServer(function(input, output, session) {
     distinct(Water_type) %>%
     rename(Water=Water_type)
   
-  wb <- readdb(dbpath, "SELECT * FROM WB")
-  wb <- wb %>% mutate(DistrictID = paste0(Type," ",Typename))
-  DistrictList<-c("1s Västkustens inre kustvatten","1n Västkustens inre kustvatten","2 Västkustens fjordar","3 Skagerak, Västkustens yttre kustvatten","4 Kattegat, Västkustens yttre kustvatten","5 Södra Hallands och norra Öresunds kustvatten","6 Öresunds kustvatten","7 Skånes kustvatten","8 Blekinge skärgårds och Kalmarsunds inre kustvatten","9 Blekinge skärgård, och Kalmarsunds yttre kustvatten","10 Östra Ölands, sydöstra Gotlands kustvatten samt Gotska sandön","11 Gotlands västra och norra kustvatten","12n Östergötlands samt Stockholms skärgård, mellankustvatten","12s Östergötlands samt Stockholms skärgård, mellankustvatten","13 Östergötlands inre skärgård","14 Östergötlands, yttre kustvatten","15 Stockholms skärgård, yttre kustvatten","16 Södra Bottenhavet, inre kustvatten","17 Södra Bottenhavet, yttre kustvatten","18 Norra Bottenhavet, Höga kustens inre kustvatten","19 Norra Bottenhavet, Höga kustens yttre kustvatten","20 Norra Kvarkens inre kustvatten","21 Norra Kvarkens yttre kustvatten","22 Bottenviken, inre kustvatten","23 Bottenviken, yttre kustvatten","24 Stockholms inre skärgård og Hallsfjärden","25 Göta Älvs- och Nordre Älvs estuarie")
-  wb$DistrictID<-factor(wb$DistrictID, levels=DistrictList)
-
   period_list <- function(){
-    c("2004-2009","2010-2015")
+    c("2007-2012","2013-2018")
   }
+  
   
 # ------------ sidebar menu --------------------------------------------------  
   output$dy_menu <- renderMenu({ 
@@ -125,7 +128,7 @@ shinyServer(function(input, output, session) {
     tagList(selectInput(
       "waterType",
       "Water type:",
-      choices = c("Coastal"),
+      choices = c("Coast","Lake","River"),
       #choices = listWaterType,
       multiple = FALSE,
       width="180px"
@@ -134,7 +137,7 @@ shinyServer(function(input, output, session) {
 
   
   output$selectLan <- renderUI({
-    tagList(selectInput(
+     tagList(selectInput(
       "lan",
       "Län:",
       choices = lan_list(),
@@ -149,17 +152,18 @@ shinyServer(function(input, output, session) {
       "WB Type:",
       choices = type_list(),
       multiple = FALSE,
-      width="100px"
+      width="180px"
     ))
   })
   
   output$selectPeriod <- renderUI({
     tagList(selectInput(
       "period",
-      "Select Period(s)",
+      "Select Period",
       choices = period_list(),
-      selected= period_list(),
-      multiple = TRUE
+      selected= period_list()[length(period_list())],
+      multiple = FALSE,
+      width="180px"
     ))
   })
   
@@ -169,7 +173,7 @@ shinyServer(function(input, output, session) {
       n<-input$dtwb_rows_selected
       df<-wb_list()
       wbidselect<-df[n,"WB_ID"]
-      wbnameselect<-df[n,"Name"]
+      wbnameselect<-df[n,"WB_Name"]
       db <- dbConnect(SQLite(), dbname=dbpath)
       sql<-paste0("SELECT COUNT(*) FROM data WHERE period IN (",periodlist,") AND  WB IN ('",wbidselect,"')")
       nrows <- dbGetQuery(db, sql)
@@ -197,9 +201,10 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # Table of waterbodies
   output$dtwb = DT::renderDataTable({
-    df <- wb_list() %>% select(Lan_ID,Lan_name,WB_ID,Name,District,TypeName)
-    names(df)<-c("Län ID","Län", "WB ID", "WB Name", "District", "Type")
+    df <- wb_list() %>% select(WB_ID,WB_Name,Lan,Municipality)
+    names(df)<-c("WB ID","WB Name","Län","Municipality" )
     df
   }, selection = 'single', rownames= F,options = list(lengthMenu = c(5, 10, 20, 50), pageLength = 5))
   
@@ -209,47 +214,56 @@ shinyServer(function(input, output, session) {
     Lan <- c("ALL")
     all <- data.frame(Lan,row.names=F,stringsAsFactors=F)
     df<-dfwb_lan  %>%
-    distinct(Lan_ID,Lan_name) %>%
-      arrange(Lan_ID) %>%
-      mutate(Lan=paste0(Lan_ID," - ",Lan_name)) %>%
+    distinct(Lan,LanID,LanName) %>%
+      arrange(LanName) %>%
       select(Lan)
     df<-bind_rows(all,df)
     df$Lan
   })
+  
+  
 
   type_list <- reactive({
     #TO DO - include filter by water type (coastal, lake, stream) 
-    
     Type <- c("ALL")
     all <- data.frame(Type,row.names=F,stringsAsFactors=F)
-    df<-dfwb_lan
-    if (!is.null(input$lan)){
-    if(input$lan!="ALL"){
-      lanid <- substr(input$lan,1,2)
-      df <- df %>% filter(Lan_ID==lanid)
-    }}
+    df<-dfwb_info
+      if (!is.null(input$lan)){
+        if(input$lan!="ALL"){
+          dfselect<-dfwb_lan %>% 
+            filter(Lan==input$lan) %>%
+            select(WB_ID)
+          df <- df %>% inner_join(dfselect,by="WB_ID")
+        }}
     df <- df %>%
-      distinct(Type,TypeNum) %>%
-      arrange(TypeNum) %>%
-      select(Type)
+      distinct(CLR,typology) %>%
+      arrange(CLR,typology) %>%
+      select(Type=typology)
     df<-bind_rows(all,df)
     df$Type
+    
   })
 
   wb_list<-reactive({
-    df <- dfwb_lan
+    df <- dfwb_info
     values$WBinfo <- ""
+    if (!is.null(input$waterType)){
+      df <- df %>% filter(CLR==input$waterType)
+    }
+    
     if (!is.null(input$lan)){
       if(input$lan!="ALL"){
-        lanid <- substr(input$lan,1,2)
-        df <- df %>% filter(Lan_ID==lanid)
-      }
-    }
+        dfselect<-dfwb_lan %>% 
+          filter(Lan==input$lan) %>%
+          select(WB_ID)
+        df <- df %>% inner_join(dfselect,by="WB_ID")
+      }}
     if (!is.null(input$type)){
       if(input$type!="ALL"){
-        df <- df %>% filter(Type==input$type)
+        df <- df %>% filter(typology==input$type)
         }
-      }
+    }
+
     return(df)
   })
   
@@ -270,11 +284,17 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$buttonWB, {
     values$wbselected<-wb_list()[input$dtwb_rows_selected,"WB_ID"]
-    values$wbselectedname<-wb_list()[input$dtwb_rows_selected,"Name"]
-    values$typeselected<-wb_list()[input$dtwb_rows_selected,"Type"]
-    values$typeselectedname<-wb_list()[input$dtwb_rows_selected,"TypeName"]
+    values$wbselectedname<-wb_list()[input$dtwb_rows_selected,"WB_Name"]
+    values$typeselected<-dfwb_info[dfwb_info$WB_ID==values$wbselected,"typology"]
     values$periodselected<-input$period
-    values$watertypeselected<-input$waterType
+    if(input$waterType=="Coast"){
+      values$watertypeselected<-"Coastal"
+    }else if(input$waterType=="Lake"){
+      values$watertypeselected<-"Lakes"
+    }else if(input$waterType=="River"){
+      values$watertypeselected<-"Rivers"
+    }
+  
     values$IndSelection<-""
     updateTabItems(session, "tabs", "indicators")
     
@@ -294,10 +314,10 @@ shinyServer(function(input, output, session) {
   })
   
   output$SelectedType<-renderText({
-    if(values$typeselectedname==""){
+    if(values$typeselected==""){
       titletext<-""
     }else{
-      titletext<-paste0("Type: ",values$typeselectedname)
+      titletext<-paste0("Type: ",values$typeselected)
     }   
   })
   
@@ -339,6 +359,7 @@ shinyServer(function(input, output, session) {
   
   
   updatedtind<-function(){
+    
   output$dtind = DT::renderDataTable({
     df<-values$df_ind_status
     if(typeof(df)!="list"){
@@ -364,6 +385,7 @@ shinyServer(function(input, output, session) {
   
 
   UpdateIndTable<-function(){
+    
       # Get the info on the status for the indicators
       bOK<-TRUE
       db <- dbConnect(SQLite(), dbname=dbpath)
@@ -388,6 +410,7 @@ shinyServer(function(input, output, session) {
         df2 <- df2 %>% select(Indicator)
         if(nrow(df2)==0){bOK<-FALSE}
       }
+      
       if(bOK){
         df <- df %>% select(Indicator,Period,Code)
         indlist<-paste(paste0("'",df2$Indicator,"'"),collapse = ",")
@@ -406,17 +429,19 @@ shinyServer(function(input, output, session) {
         sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,
                     "' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
         dftypeperiod <- readdb(dbpath, sql)
-        #incProgress(0.2)
         dbDisconnect(db)
         
-        dftypeperiod<-CleanSubTypes(dftypeperiod)
+        if(nrow(dftypeperiod)>0){
+          
+       dftypeperiod<-CleanSubTypes(dftypeperiod)
         
-        dfwb_type <- dfwb_lan %>% distinct(WB_ID,Name)
+        dfwb_type <- dfwb_info %>% distinct(WB_ID,WB_Name)
         
         dftypeperiod <- dftypeperiod %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
           filter(Code==0) 
         dftypeperiod<- df2 %>% left_join(dftypeperiod,by=c("Indicator","Period")) %>%
           filter(!is.na(Mean))
+        
         dftypeperiod$Include<-T
         
         df <- df2 %>% left_join(df,by=c("Indicator","Period")) %>%
@@ -430,7 +455,7 @@ shinyServer(function(input, output, session) {
             ungroup() %>%
             mutate(Extrap=ifelse(sum==0,F,T)) %>%
             select(-sum) 
-          
+          cat("3\n")
         df <- df %>% 
           select(-Code) %>%
           spread(key="Period",value="Data") %>%
@@ -441,6 +466,10 @@ shinyServer(function(input, output, session) {
         
         values$df_ind_status <- df
         values$resAvgType <-dftypeperiod
+        }else{
+          values$df_ind_status <-""
+          values$resAvgType <-""
+         }
         
       }else{
         values$df_ind_status <-""
@@ -449,7 +478,6 @@ shinyServer(function(input, output, session) {
 
       updatedtind()
       }
-
 
 
   output$dtextrap = DT::renderDataTable({
@@ -467,17 +495,20 @@ shinyServer(function(input, output, session) {
         values$dtcurrentindicator<-indicator
         df <- df %>% filter(Indicator==indicator)
       if(nrow(df)>0){
-        df <- df %>% distinct(WB,Name,Include)
+        dfsave<-df
+        save(dfsave,file="test.Rda")
+        
+        df <- df %>% distinct(WB,WB_Name,Include)
 
         df$Use<-shinyInput(checkboxInput, nrow(df), 'usestn_', value = df$Include, labels="",width='30px')# labels=df[,"WB"])
-        df<-df %>% select(WB,Name)#,Use
+        df<-df %>% select(WB,WB_Name)#,Use
         values$n_stn_extrap<-nrow(df)
         #output$btnExtrap <- renderUI({
         #  tagList(actionButton("btnExtrap", "Update"))
         #})
 
       }else{
-        df<-data.frame()
+        df<-data.frame(WB=c("No data"))
       }}
     }
     df
