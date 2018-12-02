@@ -36,7 +36,7 @@ shinyServer(function(input, output, session) {
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
   dbpath<-"../efs/ekostat/ekostat.db"
-  dbpath<-"../ekostat_calc/output/ekostat_coast.db"
+  dbpath<-"../ekostat_indicators/output/ekostat2.db"
   dfind<-ReadIndicatorType()
   dfvar<-ReadVariances()
   dfbounds<-ReadBounds()
@@ -82,16 +82,20 @@ shinyServer(function(input, output, session) {
     inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
   
   pressure_list<-function(){
+    if(!is.null(values$watertypeselected)){
     list<-c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
     list<-gsub(" ",".",list)
     df<-dfind[,c("Water_type",list)]
     df<-df %>% 
       filter(Water_type==values$watertypeselected)%>% 
-      gather(key="Pressure",value="value",list2) %>%
+      gather(key="Pressure",value="value",list) %>%
       filter(value=="X") %>%
       distinct(Pressure)
     list<-df$Pressure
     list<-gsub("\\."," ",list)
+    }else{
+      list<-c("")
+    }
     return(list)
   }
   
@@ -102,9 +106,9 @@ shinyServer(function(input, output, session) {
     )
   
   
-  listWaterType<- dfind %>% 
-    distinct(Water_type) %>%
-    rename(Water=Water_type)
+  # listWaterType<- dfind %>% 
+  #   distinct(Water_type) %>%
+  #   rename(Water=Water_type)
   
   period_list <- function(){
     c("2007-2012","2013-2018")
@@ -117,9 +121,9 @@ shinyServer(function(input, output, session) {
                 menuItem("Waterbody", tabName = "waterbody", icon = icon("map-marker")),
                 menuItem("Indicators", tabName = "indicators", icon = icon("tasks")),
                 #menuItem("Data", tabName = "data", icon = icon("database"))
-                menuItem("Status", tabName = "status", icon = icon("bar-chart")),
+                menuItem("Status", tabName = "status", icon = icon("bar-chart"))
                 #menuItem("Download", tabName = "download", icon = icon("file"))
-                menuItem("Options", tabName = "options", icon = icon("cog"))#,
+                #menuItem("Options", tabName = "options", icon = icon("cog"))#,
     )
   })
   
@@ -162,7 +166,7 @@ shinyServer(function(input, output, session) {
       "Select Period",
       choices = period_list(),
       selected= period_list()[length(period_list())],
-      multiple = FALSE,
+      multiple = F,
       width="180px"
     ))
   })
@@ -201,7 +205,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # Table of waterbodies
+  # ----------- outpout DataTable of waterbodies ----------------------------------
   output$dtwb = DT::renderDataTable({
     df <- wb_list() %>% select(WB_ID,WB_Name,Lan,Municipality)
     names(df)<-c("WB ID","WB Name","Län","Municipality" )
@@ -244,8 +248,24 @@ shinyServer(function(input, output, session) {
     
   })
 
+  # ---------------- wb_list: table of WBs matching search criteria  ----------------------
   wb_list<-reactive({
     df <- dfwb_info
+    if(T){
+      if(!is.null(input$period)){
+        #periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
+        dffilter <- filter(wb,Period %in% input$period) %>%
+          distinct(WB)
+      }else{
+        dffilter <- distinct(wb,WB)
+      }
+      df <- df %>%
+        inner_join(dffilter,by=c("WB_ID"="WB"))
+      #browser()
+    }
+    #df <- df %>%
+    #  inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
+    
     values$WBinfo <- ""
     if (!is.null(input$waterType)){
       df <- df %>% filter(CLR==input$waterType)
@@ -398,7 +418,12 @@ shinyServer(function(input, output, session) {
       
       
       pname<-input$pressure
-      if(is.null(pname)){bOK<-FALSE}
+      
+      if(is.null(pname)){
+        bOK<-FALSE
+      }else if(pname==""){
+          bOK<-FALSE
+          }
       if(is.null(values$watertypeselected)){bOK<-FALSE}
       if(is.null(values$periodselected)){bOK<-FALSE}
       
@@ -421,6 +446,7 @@ shinyServer(function(input, output, session) {
         
         dfperiod<-data.frame(values$periodselected,stringsAsFactors=F)
         dfperiod$X<-1
+        
         df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-c(X,num))
         names(df2) = c("Indicator","Period")
         
@@ -436,11 +462,15 @@ shinyServer(function(input, output, session) {
        dftypeperiod<-CleanSubTypes(dftypeperiod)
         
         dfwb_type <- dfwb_info %>% distinct(WB_ID,WB_Name)
-        
-        dftypeperiod <- dftypeperiod %>% left_join(dfwb_type,by=c("WB"="WB_ID")) %>%
+        #browser()
+        dftypeperiod <- dftypeperiod %>% 
+          left_join(dfwb_type,by=c("WB"="WB_ID")) 
+        dftypeperiod <- dftypeperiod %>%
           filter(Code==0) 
         dftypeperiod<- df2 %>% left_join(dftypeperiod,by=c("Indicator","Period")) %>%
           filter(!is.na(Mean))
+        
+        if(nrow(dftypeperiod)>0){
         
         dftypeperiod$Include<-T
         
@@ -469,6 +499,10 @@ shinyServer(function(input, output, session) {
         }else{
           values$df_ind_status <-""
           values$resAvgType <-""
+        }
+        }else{
+          values$df_ind_status <-""
+          values$resAvgType <-""
          }
         
       }else{
@@ -479,7 +513,7 @@ shinyServer(function(input, output, session) {
       updatedtind()
       }
 
-
+  # ---------- DataTable with stations for extrapolation ---------------------
   output$dtextrap = DT::renderDataTable({
 
     df<-values$resAvgType
@@ -594,6 +628,7 @@ shinyServer(function(input, output, session) {
 observeEvent(input$goButton, {
   start.time <- Sys.time()
   #df<-listIndicators()
+  #browser()
   withProgress(message = 'Calculating...', value = 0, {
     df<- listIndicators()
     df <- df %>% filter(Select==T)
@@ -616,19 +651,19 @@ observeEvent(input$goButton, {
   # Get results for the waterbody we are showing results for   
     db <- dbConnect(SQLite(), dbname=dbpath)
     sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblist,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+                ") AND Indicator IN (",IndList,")")
     resAvg <- dbGetQuery(db, sql)
     incProgress(0.1)
     sql<-paste0("SELECT * FROM resYear WHERE period IN (",periodlist,") AND WB IN (",wblist,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+                ") AND Indicator IN (",IndList,")")
     resYr <- dbGetQuery(db, sql)
     incProgress(0.1)
     sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblist,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"' AND sim <= ",nSimMC)
+                ") AND Indicator IN (",IndList,") AND sim <= ",nSimMC)
     resMC <- dbGetQuery(db, sql)
     incProgress(0.1)
     sql<-paste0("SELECT * FROM resErr WHERE period IN (",periodlist,") AND WB IN (",wblist,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+                ") AND Indicator IN (",IndList,")")
     resErr <- dbGetQuery(db, sql)
     dbDisconnect(db)
     
@@ -665,15 +700,15 @@ observeEvent(input$goButton, {
     wblisttype<-paste(paste0("'",dfextrap$WB,"'"),collapse = ",")
     db <- dbConnect(SQLite(), dbname=dbpath)
     sql<-paste0("SELECT * FROM resAvg WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+                ") AND Indicator IN (",IndList,")")
     resAvgtype <- dbGetQuery(db, sql)
     incProgress(0.1)
     sql<-paste0("SELECT * FROM resYear WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"'")
+                ") AND Indicator IN (",IndList,")")
     resYrtype <- dbGetQuery(db, sql)
     incProgress(0.1)
     sql<-paste0("SELECT * FROM resMC WHERE period IN (",periodlist,") AND WB IN (",wblisttype,
-                ") AND Indicator IN (",IndList,") AND Type='",values$typeselected,"' AND sim <= ",nSimMC)
+                ") AND Indicator IN (",IndList,") AND sim <= ",nSimMC)
     resMCtype <- dbGetQuery(db, sql)
     incProgress(0.1)
     dbDisconnect(db)    
@@ -1272,7 +1307,7 @@ observeEvent(input$goButton, {
       paste(values$wbselected, ".csv", sep = "")
     },
     content = function(file) {
-      write.table(downloadResults(),file,row.names=F,sep="\t", na="")
+      write.table(downloadResults(),file,row.names=F,sep=";", na="")
     }
   )
  
