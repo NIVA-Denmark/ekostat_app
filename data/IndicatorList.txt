@@ -21,7 +21,7 @@ Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinter	TP	Total Phosphorus	Winter
 Coastal	Supporting	Nutrients	Phosphorus	CoastTPwinterEQR	TP	Total Phosphorus	Winter TP conc. (EQR)	X							
 Coastal	Supporting	Oxygen	Oxygen	CoastOxygen	O2	Oxygen	Oxygen Concentration	X	X					X	X
 Coastal	Supporting	Oxygen	Oxygen	CoastHypoxicArea	HypoxicAreaPct	Area affected by hypoxia (%)	Area affected by hypoxia (%)	X	X					X	X
-Coastal	Supporting	Oxygen	Oxygen	CoastBottomOxygen	O2_bot	Oxygen Bottom Water	Oxygen	X	X					X	X
+Coastal	Supporting	Oxygen	Oxygen	CoastBottomOxygen	O2_bot	Oxygen Bottom Water	Bottom Oxygen Concentration	X	X					X	X
 Lakes	Biological	Phytoplankton	Phytoplankton biomass	LakeBiovol	biovol	Phytoplankton biovolume	Phytoplankton biovolume	X							X
 Lakes	Biological	Phytoplankton	Phytoplankton biomass	LakeBiovolEQR	biovol	Phytoplankton biovolume	Phytoplankton biovolume	X							X
 Lakes	Biological	Phytoplankton	Phytoplankton composition	LakePropCyano	Proportion_cyanobacteria	Proportion cyanobacteria	Proportion cyanobacteria	X							X

@@ -151,11 +151,15 @@ GetVarNames<-function(indicator){
     df.indicators<-ReadIndicatorType()
     df.indicators<-df.indicators %>% filter(Indicator==indicator)
     obsvar<-as.character(df.indicators[1,"Parameter"])
-    if(indicator %in% c("CoastOxygen")){
-      varlist<-c("depth","sali",obsvar)
+    if(substr(indicator,1,5)=="Coast"){
+      if(indicator %in% c("CoastOxygen")){
+        varlist<-c("depth","sali",obsvar)
+      }else{
+        varlist<-c("sali",obsvar)
+      } 
     }else{
-      varlist<-c("sali",obsvar)
-    } 
+      varlist<-c(obsvar)
+    }
   }else{
     varlist<-""
   }
