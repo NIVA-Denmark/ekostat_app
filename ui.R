@@ -37,15 +37,19 @@ shinyUI(
                   column(2,
                          uiOutput("selectLan")),
                   column(2,
+                         uiOutput("selectMun")),
+                  column(2,
                          uiOutput("selectType")),
                   column(3,
-                         uiOutput("selectPeriod"))#,
-                  # column(3,
-                  #        checkboxInput("HideWB", 
-                  #                      "Hide WBs with no data.",
-                  #                      value = FALSE, width = '100%'))
-                         
+                         uiOutput("selectPeriod"))
                 ),
+                fluidRow(
+                  column(6,
+                         ""),
+                  column(3,
+                         "")#,
+                ),
+                
                 fluidRow(column(10, offset = 0,
                                 #box(
                                 #  title = "Title 1", width=10,solidHeader = TRUE, status = "primary",
@@ -71,7 +75,7 @@ shinyUI(
                         column(2,h1(" "),uiOutput("goButton")),
                         column(4,h1(" "),checkboxInput("IgnoreErr", 
                                              "Use all data. For for the selected waterbody, use indicators which have data for fewer than 3 out of 6 years.",
-                                              value = FALSE, width = '100%')#,
+                                              value = TRUE, width = '100%')#,
                                #p("Use all data for the selected waterbody, including indicators which have data for fewer than 3 out of 6 years.")#,
                         #column(1,h2(" "),uiOutput("btnExtrap"))
                         )),

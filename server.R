@@ -35,8 +35,8 @@ shinyServer(function(input, output, session) {
   
   # ------------------------ setup -----------------------------------------------
   # Path to the eksostat database
-  dbpath<-"../efs/ekostat/ekostat.db"
-  dbpath<-"../ekostat_indicators/output/ekostat2.db"
+  dbpath<-"../efs/ekostat/ekostat2.db"
+
   dfind<-ReadIndicatorType()
   dfvar<-ReadVariances()
   dfbounds<-ReadBounds()
@@ -73,8 +73,14 @@ shinyServer(function(input, output, session) {
   values$resMCType <-""
   values$IndSelection<-""
   
-  dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan")   # matching Län and WB_ID
-  dfwb_mun <- readdb(dbpath, "SELECT * FROM WB_Mun")   # matching Kommune and WB_ID
+  dfwb_lan <- readdb(dbpath, "SELECT * FROM WB_Lan") %>% # matching Län and WB_ID
+    filter(!is.na(Lan)) %>%
+    mutate(LanName=trimws(LanName,which="both"),Lan=trimws(Lan,which="both"))
+  
+  dfwb_mun <- readdb(dbpath, "SELECT * FROM WB_Mun") %>%  # matching Kommune and WB_ID
+    filter(!is.na(Mun)) %>%
+    mutate(MunName=trimws(MunName,which="both"),Mun=trimws(Mun,which="both"))
+  
   dfwb_info <- readdb(dbpath, "SELECT * FROM WB_info") # type info WB_ID
   wb <- readdb(dbpath, "SELECT * FROM WB")             # available assessments
   
@@ -141,10 +147,20 @@ shinyServer(function(input, output, session) {
 
   
   output$selectLan <- renderUI({
-     tagList(selectInput(
+    tagList(selectInput(
       "lan",
       "Län:",
       choices = lan_list(),
+      multiple = FALSE,
+      width="180px"
+    ))
+  })
+  
+  output$selectMun <- renderUI({
+    tagList(selectInput(
+      "mun",
+      "Municipality:",
+      choices = mun_list(),
       multiple = FALSE,
       width="180px"
     ))
@@ -218,16 +234,27 @@ shinyServer(function(input, output, session) {
   # ----- reactive data for the waterbody selection
   
   lan_list <- reactive({
+    #browser()
     Lan <- c("ALL")
     all <- data.frame(Lan,row.names=F,stringsAsFactors=F)
     df<-dfwb_lan  %>%
-    distinct(Lan,LanID,LanName) %>%
+      distinct(Lan,LanID,LanName) %>%
       arrange(LanName) %>%
       select(Lan)
     df<-bind_rows(all,df)
     df$Lan
   })
   
+  mun_list <- reactive({
+    Mun <- c("ALL")
+    all <- data.frame(Mun,row.names=F,stringsAsFactors=F)
+    df<-dfwb_mun  %>%
+      distinct(Mun,MunID,MunName) %>%
+      arrange(MunName) %>%
+      select(Mun)
+    df<-bind_rows(all,df)
+    df$Mun
+  })
   
 
   type_list <- reactive({
@@ -242,6 +269,15 @@ shinyServer(function(input, output, session) {
             select(WB_ID)
           df <- df %>% inner_join(dfselect,by="WB_ID")
         }}
+    if (!is.null(input$mun)){
+      if(input$mun!="ALL"){
+        dfselect<-dfwb_mun %>% 
+          filter(Mun==input$mun) %>%
+          select(WB_ID)
+        df <- df %>% inner_join(dfselect,by="WB_ID")
+      }}
+    
+    
     df <- df %>%
       distinct(CLR,typology) %>%
       arrange(CLR,typology) %>%
@@ -274,6 +310,14 @@ shinyServer(function(input, output, session) {
       df <- df %>% filter(CLR==input$waterType)
     }
     
+    if (!is.null(input$mun)){
+      if(input$mun!="ALL"){
+        dfselect<-dfwb_mun %>% 
+          filter(Mun==input$mun) %>%
+          select(WB_ID)
+        df <- df %>% inner_join(dfselect,by="WB_ID")
+      }}
+        
     if (!is.null(input$lan)){
       if(input$lan!="ALL"){
         dfselect<-dfwb_lan %>% 
@@ -630,7 +674,7 @@ shinyServer(function(input, output, session) {
 observeEvent(input$goButton, {
   start.time <- Sys.time()
   #df<-listIndicators()
-  browser()
+  #browser()
   withProgress(message = 'Calculating...', value = 0, {
     df<- listIndicators()
     df <- df %>% filter(Select==T)
