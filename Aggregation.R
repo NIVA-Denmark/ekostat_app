@@ -149,10 +149,11 @@ EQRclass<-function(df,varname="EQR"){
 #' 
 
 Frequency<-function(df,Groups="",varname="Class"){
+  #browser()
   names(df)[names(df)==varname]<-"ClassID"
   GroupsSum <- c(Groups,"ClassID")
   
-  ClassID<-c(1,2,3,4,5)
+  ClassID<-c(0,1,2,3,4,5)
   ClassID<-data.frame(ClassID)
   ClassID$X<-1
   
@@ -171,14 +172,23 @@ Frequency<-function(df,Groups="",varname="Class"){
     left_join(ClassID) %>%
     select(-X)
   
+  dfn <- dfn %>% mutate(ClassID=ifelse(is.na(ClassID),0,ClassID))
   cat("left_join dfn\n")
   dfn<-dft %>% 
-    left_join(dfn) %>%
-    mutate(f=n/t) %>%
-    select(-c(n,t)) %>% 
-    ungroup() %>%
-    mutate(f=ifelse(is.na(f),0,f),prefix="C") %>%
-    mutate(ClassID=paste0(prefix,ClassID)) %>%
+    left_join(dfn) 
+  dfn<-dfn %>%
+    filter(ClassID!=0)
+  dfn<-dfn %>%
+    mutate(f=n/t) 
+  dfn<-dfn %>%
+    select(-c(n,t)) 
+  dfn<-dfn %>%
+    ungroup() 
+  dfn<-dfn %>%
+    mutate(f=ifelse(is.na(f),0,f),prefix="C") 
+  dfn<-dfn %>%
+    mutate(ClassID=paste0(prefix,ClassID)) 
+  dfn<-dfn %>%
     select(-prefix)
   
   #browser()

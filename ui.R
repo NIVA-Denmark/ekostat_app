@@ -39,12 +39,12 @@ shinyUI(
                   column(2,
                          uiOutput("selectType")),
                   column(3,
-                         uiOutput("selectPeriod")),
-                  column(3,
-                         checkboxInput("HideWB", 
-                                       "Hide WBs with no data.",
-                                       value = FALSE, width = '100%')
-                         )
+                         uiOutput("selectPeriod"))#,
+                  # column(3,
+                  #        checkboxInput("HideWB", 
+                  #                      "Hide WBs with no data.",
+                  #                      value = FALSE, width = '100%'))
+                         
                 ),
                 fluidRow(column(10, offset = 0,
                                 #box(

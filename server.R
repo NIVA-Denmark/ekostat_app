@@ -160,14 +160,17 @@ shinyServer(function(input, output, session) {
     ))
   })
   
+  
+  
+  
   output$selectPeriod <- renderUI({
     tagList(selectInput(
       "period",
       "Select Period",
       choices = period_list(),
       selected= period_list()[length(period_list())],
-      multiple = F,
-      width="180px"
+      multiple = T#,
+      #width="180px"
     ))
   })
   
@@ -205,7 +208,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # ----------- outpout DataTable of waterbodies ----------------------------------
+  # ----------- output DataTable of waterbodies ----------------------------------
   output$dtwb = DT::renderDataTable({
     df <- wb_list() %>% select(WB_ID,WB_Name,Lan,Municipality)
     names(df)<-c("WB ID","WB Name","Län","Municipality" )
@@ -756,7 +759,7 @@ observeEvent(input$goButton, {
              GM=as.numeric(GM),
              HG=as.numeric(HG),
              Ref=as.numeric(Ref))
-    
+        #browser()
       resAvgExtrap<-resAvgExtrap %>% mutate(Value=Mean)
       resAvgExtrap<-GetClass(resAvgExtrap)
   
