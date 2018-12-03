@@ -508,7 +508,8 @@ shinyServer(function(input, output, session) {
           
        dftypeperiod<-CleanSubTypes(dftypeperiod)
         
-        dfwb_type <- dfwb_info %>% distinct(WB_ID,WB_Name)
+        dfwb_type <- dfwb_info %>% distinct(WB_ID) #,WB_Name)
+        
         #browser()
         dftypeperiod <- dftypeperiod %>% 
           left_join(dfwb_type,by=c("WB"="WB_ID")) 
@@ -578,6 +579,7 @@ shinyServer(function(input, output, session) {
         dfsave<-df
         save(dfsave,file="test.Rda")
         
+        df <- df %>% left_join(select(dfwb_info,WB_ID,WB_Name),by=c("WB"="WB_ID"))
         df <- df %>% distinct(WB,WB_Name,Include)
 
         df$Use<-shinyInput(checkboxInput, nrow(df), 'usestn_', value = df$Include, labels="",width='30px')# labels=df[,"WB"])
