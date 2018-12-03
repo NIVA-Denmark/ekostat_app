@@ -481,6 +481,7 @@ shinyServer(function(input, output, session) {
         df2 <- df2 %>% filter(!is.na(Indicator))
         df2 <- df2 %>% select(Indicator)
         if(nrow(df2)==0){bOK<-FALSE}
+        # now we have a list of indicators for the selected pressure
       }
       
       if(bOK){
@@ -497,7 +498,8 @@ shinyServer(function(input, output, session) {
         df2<-df2 %>% left_join(dfperiod,by="X") %>% select(-c(X,num))
         names(df2) = c("Indicator","Period")
         
-        
+        # get the results from all WB's where the WB type is the same as the
+        # "active" WB but excluding the active WB itself
         db <- dbConnect(SQLite(), dbname=dbpath)
         sql<-paste0("SELECT * FROM resAvg WHERE Type ='",values$typeselected,
                     "' and Indicator in (",indlist,") AND WB <>'", values$wbselected,"'")
@@ -576,8 +578,8 @@ shinyServer(function(input, output, session) {
         values$dtcurrentindicator<-indicator
         df <- df %>% filter(Indicator==indicator)
       if(nrow(df)>0){
-        dfsave<-df
-        save(dfsave,file="test.Rda")
+        #dfsave<-df
+        #save(dfsave,file="test.Rda")
         
         df <- df %>% left_join(select(dfwb_info,WB_ID,WB_Name),by=c("WB"="WB_ID"))
         df <- df %>% distinct(WB,WB_Name,Include)
