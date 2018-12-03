@@ -105,12 +105,7 @@ shinyServer(function(input, output, session) {
     return(list)
   }
   
-  # rounding results
-  RoundColList <-
-    c(
-      "secchi","temp","sali","chla" ,"biovol","TP","TN","dens_dif","BQI","MSMDI","logitMSMDI","Oxygen"
-    )
-  
+
   
   # listWaterType<- dfind %>% 
   #   distinct(Water_type) %>%
@@ -190,6 +185,7 @@ shinyServer(function(input, output, session) {
     ))
   })
   
+  # information about the selected waterbody
   output$wb_info<-renderText({
     periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
     if (length(input$dtwb_rows_selected) > 0) {
@@ -226,8 +222,8 @@ shinyServer(function(input, output, session) {
   
   # ----------- output DataTable of waterbodies ----------------------------------
   output$dtwb = DT::renderDataTable({
-    df <- wb_list() %>% select(WB_ID,WB_Name,Lan,Municipality)
-    names(df)<-c("WB ID","WB Name","Län","Municipality" )
+    df <- wb_list() %>% select(WB_ID,WB_Name,District,Lan,Municipality,typology)
+    names(df)<-c("WB ID","WB Name","District","Län","Municipality","Type" )
     df
   }, selection = 'single', rownames= F,options = list(lengthMenu = c(5, 10, 20, 50), pageLength = 5))
   
@@ -256,12 +252,13 @@ shinyServer(function(input, output, session) {
     df$Mun
   })
   
-
+  # make list of WB types
   type_list <- reactive({
-    #TO DO - include filter by water type (coastal, lake, stream) 
     Type <- c("ALL")
     all <- data.frame(Type,row.names=F,stringsAsFactors=F)
     df<-dfwb_info
+    df <- df %>% filter(CLR==input$waterType)
+    
       if (!is.null(input$lan)){
         if(input$lan!="ALL"){
           dfselect<-dfwb_lan %>% 
@@ -277,10 +274,13 @@ shinyServer(function(input, output, session) {
         df <- df %>% inner_join(dfselect,by="WB_ID")
       }}
     
-    
+    #browser()
     df <- df %>%
       distinct(CLR,typology) %>%
-      arrange(CLR,typology) %>%
+      mutate(typesort=as.numeric(ifelse(CLR=="Coast",gsub("n","",gsub("s","",typology)),typology)))
+     
+    df <- df %>%
+      arrange(CLR,typesort,typology) %>%
       select(Type=typology)
     df<-bind_rows(all,df)
     df$Type
