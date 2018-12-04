@@ -22,6 +22,7 @@ source("IndicatorFunctions.R")
 source("ReadIndicatorType.R")
 source("ReadVariances.R")
 source("ReadBounds.R")
+#source("report.R")
 
 shinyServer(function(input, output, session) {
   
