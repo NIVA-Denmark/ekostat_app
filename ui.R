@@ -82,6 +82,14 @@ shinyUI(
                fluidRow(column(7,h4("Indicator availability")),
                         column(3,h4("WBs for extrapolation:"))
                ),
+               #fluidRow(column(3, offset = 0,align="left",
+               #                checkboxInput("indAll","Indicators - Select/Deselect All ",
+               #                              value = TRUE, width = '100%')),
+               #         column(4, offset = 0,align="right",
+               #                checkboxInput("extrapAll","Extrapolation - Select/Deselect All ",
+               #                              value = TRUE, width = '100%'))
+               #),
+        
                fluidRow(column(7,DT::dataTableOutput("dtind")
                                ),
                         column(3,DT::dataTableOutput("dtextrap"))

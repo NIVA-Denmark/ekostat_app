@@ -51,9 +51,10 @@ shinyServer(function(input, output, session) {
   
   
   dfobs <- function(wblist,periodlist){
+    #browser()
     sql<-paste0("SELECT * FROM data WHERE period IN (",periodlist,") AND WB = '",wblist,"'")
     df<-readdb(dbpath, sql)
-    df <- df %>% filter(typology==values$typeselected)
+    #df <- df %>% filter(typology==values$typeselected) # do we still need to filter by tyopolgy?
     df$date<-as.Date(df$date,origin="1970-01-01")
     return(df)
   } 
@@ -355,7 +356,7 @@ shinyServer(function(input, output, session) {
     
     UpdateIndTable()
  
-    })
+    }, ignoreInit = T)
 
   # ------ Output components for the indicator selection / modification page -----------------------
   
@@ -389,7 +390,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$pressure, {
     values$IndSelection<-""
     UpdateIndTable()
-  })
+  }, ignoreInit = T)
   
   output$goButton <- renderUI({
     if(values$wbselected==""){
@@ -412,7 +413,7 @@ shinyServer(function(input, output, session) {
   # })"))
   
   
-  updatedtind<-function(){
+  updatedtind<-function(reset=0){
     
   output$dtind = DT::renderDataTable({
     df<-values$df_ind_status
@@ -436,6 +437,10 @@ shinyServer(function(input, output, session) {
                preDrawCallback = JS('function() { Shiny.unbindAll(this.api().table().node()); }'),
                drawCallback = JS('function() { Shiny.bindAll(this.api().table().node()); } ')))
 }
+  
+   observeEvent(input$extrapAll, {
+     cat(paste0("extrapAll:",input$extrapAll,"\n"))
+   }, ignoreInit = T)
   
 
   UpdateIndTable<-function(){
@@ -545,6 +550,7 @@ shinyServer(function(input, output, session) {
       }
 
       updatedtind()
+      #browser()
       }
 
   # ---------- DataTable with stations for extrapolation ---------------------
@@ -716,6 +722,7 @@ observeEvent(input$goButton, {
     }
 
     dfextrap<-values$resAvgType
+    if(is.null(dfextrap)){dfextrap<-""}
     if(dfextrap!=""){
     dfextrap<- df %>% 
       left_join(dfextrap,by="Indicator") %>%
@@ -844,7 +851,7 @@ observeEvent(input$goButton, {
   cat(paste0(wblist[1]," time:",time.taken,"\n"))
   
   
-})
+}, ignoreInit = T)
   
 
 # --------------------------------------------------------------------
@@ -903,7 +910,7 @@ observeEvent(input$goButton, {
         sDOM = "pl"
       )
     }
-  })
+  }, ignoreInit = T)
   
   
   observeEvent(values$resMC, {
@@ -957,7 +964,7 @@ observeEvent(input$goButton, {
         select(Region, WB, Type, Typename, Period, Class)
       values$res1MC <- res1MC %>% left_join(res1Avg,by=c("Region", "WB", "Type", "Typename", "Period"))
     }
-  })
+  }, ignoreInit = T)
   
   
   
@@ -1038,7 +1045,7 @@ observeEvent(input$goButton, {
     values$res4MC <- ""
     values$resInd <- ""
     values$resObs <- ""
-  })
+  }, ignoreInit = T)
   
   observeEvent(input$resTable2_rows_selected, {
     n <- input$resTable2_rows_selected
@@ -1073,7 +1080,7 @@ observeEvent(input$goButton, {
     values$res4MC <- ""
     values$resInd <- ""
     values$resObs <- ""
-  })
+  }, ignoreInit = T)
   
   observeEvent(input$resTable3_rows_selected, {
     df <-
@@ -1111,7 +1118,7 @@ observeEvent(input$goButton, {
     
     values$resInd <- ""
     values$resObs <- ""
-  })
+  }, ignoreInit = T)
   
   observeEvent(input$resTable4_rows_selected, {
     #n<-input$resTable4_rows_selected
@@ -1137,14 +1144,15 @@ observeEvent(input$goButton, {
         Class = ClassAvg,
         EQR = EQRavg
       )
-  })
+  }, ignoreInit = T)
   
   observeEvent(input$resTableInd_rows_selected, {
+    #browser()
     df <-
       values$resInd %>% group_by(Indicator,IndSubtype) %>% summarise() %>% ungroup()
     values$sIndicator <-
       df$Indicator[input$resTableInd_rows_selected]
-    
+    #browser()
     df <- SelectObs(
       dfobs(values$sWB,paste(paste0("'",values$periodselected,"'"),collapse = ",")),
       indicator = values$sIndicator,
@@ -1156,7 +1164,7 @@ observeEvent(input$goButton, {
     }else{
       values$resObs <- ""
     }
-  })
+  }, ignoreInit = T)
   
   output$titleTable1 <- renderText({
     if (is.null(values$res1MC)) {
@@ -1183,7 +1191,7 @@ observeEvent(input$goButton, {
         ClassVar = "ClassMC"
       )
     
-  })
+  }, ignoreInit = T)
   
   
   observeEvent(values$res2MC, {
@@ -1206,7 +1214,7 @@ observeEvent(input$goButton, {
       }
     })
     
-  })
+  }, ignoreInit = T)
   
   
   observeEvent(values$res3MC, {
@@ -1229,7 +1237,7 @@ observeEvent(input$goButton, {
         "<h3>QualityElement:</h3>"
       }
     })
-  })
+  }, ignoreInit = T)
   
   observeEvent(values$res4MC, {
     grplist <-
@@ -1253,7 +1261,7 @@ observeEvent(input$goButton, {
         "<h3>Subelement:</h3>"
       }
     })
-  })
+  }, ignoreInit = T)
   
   observeEvent(values$resInd, {
     grplist <- c(
@@ -1278,7 +1286,7 @@ observeEvent(input$goButton, {
         "<h3>Indicators:</h3>"
       }
     })
-  })
+  }, ignoreInit = T)
   
   observeEvent(values$resObs, {
     #if (typeof(values$sIndicator)=="list") {
@@ -1310,9 +1318,10 @@ observeEvent(input$goButton, {
     
     
     output$plotObs <- renderPlot({
+      
       if (typeof(values$resObs)!="list") {
         p <- 0
-        #cat("value=",paste0(values$resObs[1]),"\n")
+        #browser()
       } else{
         yvar <- vars[length(vars)]
         
