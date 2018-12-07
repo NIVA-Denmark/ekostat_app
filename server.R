@@ -84,8 +84,9 @@ shinyServer(function(input, output, session) {
   dfwb_info <- readdb(dbpath, "SELECT * FROM WB_info") # type info WB_ID
   wb <- readdb(dbpath, "SELECT * FROM WB")             # available assessments
   
-  dfwb_info <- dfwb_info %>%
-    inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
+  # filtering - include onl WB's which have observations
+  #dfwb_info <- dfwb_info %>%
+  #  inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
   
   pressure_list<-function(){
     if(!is.null(values$watertypeselected)){
@@ -289,17 +290,17 @@ shinyServer(function(input, output, session) {
 
   # ---------------- wb_list: table of WBs matching search criteria  ----------------------
   wb_list<-reactive({
-    df <- dfwb_info
+    df <- dfwb_info %>% distinct(WB)
     if(T){
-      if(!is.null(input$period)){
-        #periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
-        dffilter <- filter(wb,Period %in% input$period) %>%
-          distinct(WB)
-      }else{
-        dffilter <- distinct(wb,WB)
-      }
-      df <- df %>%
-        inner_join(dffilter,by=c("WB_ID"="WB"))
+      #if(!is.null(input$period)){
+      #  #periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
+      #  dffilter <- filter(df,Period %in% input$period) %>%
+      #    distinct(WB)
+      #}else{
+      #  dffilter <- distinct(df,WB)
+      #}
+      #df <- df %>%
+      #  inner_join(dffilter,by=c("WB_ID"="WB"))
       #browser()
     }
     #df <- df %>%
