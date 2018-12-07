@@ -286,7 +286,7 @@ shinyServer(function(input, output, session) {
 
   # ---------------- wb_list: table of WBs matching search criteria  ----------------------
   wb_list<-reactive({
-    df <- dfwb_info %>% distinct(wb,WB)
+    df <- dfwb_info 
     
     values$WBinfo <- ""
     if (!is.null(input$waterType)){
