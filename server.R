@@ -426,7 +426,7 @@ shinyServer(function(input, output, session) {
       df$row<-NULL
 
       df$Check<-shinyInput(checkboxInput, nrow(df), 'ind_', value = df$Selected,labels=df[,"IndicatorDescription"])
-      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=T,labels="",width = '30px')
+      df$Extrapolate<-shinyInput(checkboxInput, nrow(df), 'extrap_', value=F,labels="",width = '30px')
 
             # reorder_columns
       df<-df[c(num_col+1,seq(2,num_col-3,1),num_col+2)]
