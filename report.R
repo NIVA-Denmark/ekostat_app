@@ -123,3 +123,28 @@ report<-function(resAvg,resMC,dfObs){
 
 downloadResults<-function(){
 }
+
+fbar<-function(flist){
+  require(ggplot2)
+  if(is.data.frame(flist)){
+    f<-unlist(flist[1,])
+  }else{
+    f<-flist
+  }
+  cPalette <- c('#FF0000','#FFC000','#FFFF00','#92D050','#00B0F0')
+  df<-data.frame(cat=c("Bad","Poor","Mod","Good","High"),f,row.names=NULL)
+  df <- df %>% 
+    mutate(f=ifelse(is.na(f),0,f))
+  p<-ggplot(df, aes(cat, f)) +
+    geom_col(aes(fill=cat)) + 
+    theme_void(base_size=6) +
+    scale_fill_manual(values=cPalette,guide=FALSE) +
+    coord_cartesian(ylim=c(0,1)) 
+    #+ theme(legend.position="none")
+  return(p)
+}
+  
+p<-fbar(c(0.160,0.060,0.245,0.535,0.160))
+p
+p<-fbar(0.000,0.185,0.540,0.235,0.040)
+p

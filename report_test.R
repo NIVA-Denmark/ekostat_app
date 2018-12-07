@@ -67,20 +67,72 @@ wb<-"SE613500-172500"
 
 dbpath<-"../efs/ekostat/ekostat2.db"
 periodlist<-c("2013-2018")
+# ------------ get data --------------------
 
+dfind<-ReadIndicatorType()
 obsparams <- data.frame(Indicator=indicatorList,stringsAsFactors=F) %>%
   left_join(select(dfind,Indicator,Parameter),by="Indicator") %>%
   distinct(Parameter)
 
 obsColumnList <- c("station","date","year","month","period","sali","depth","station_depth",obsparams$Parameter)
 
-# ------------ get data --------------------
-
-dfind<-ReadIndicatorType()
 dfAvg <- getres(dbpath,"resAvg",wb,periodlist)
 dfMC <- getres(dbpath,"resMC",wb,periodlist)
 dfObs <- getobs(dbpath,"data",wb,periodlist)
 dfObs <- dfObs[,obsColumnList]
+dfwb_info <- readdb(dbpath, "SELECT * FROM WB_info")
 
-df<-report(dfAvg,dfMC,dfObs)
+name <- dfwb_info %>% 
+  filter(WB_ID==wb) %>%
+  select(WB_Name)
+name<-name[1,1]
+
+df<-report(dfAvg,dfMC,dfObs) %>%
+  select(-c(WB,Type,Period))
+
+my.dt <- dfAvg %>%
+  select(Indicator,EQR,Class) #%>%
+  #as.data.table()
+
+my.params <- list(WB=wb,
+                  WB_name=name,
+                  n = 2, 
+                  dfAvg = dfAvg,
+                  df=df)
+
+
+filename = "waters.html"
+rmarkdown::render("waters.Rmd", output_file = filename,
+                  params = my.params,
+                  envir = new.env(parent = globalenv())
+                  )
+
+
+if(FALSE){
+  # PROBLEM BIT WHERE I AM ADDING ON GALLERY EXAMPLE
+  # handler from https://stackoverflow.com/questions/37347463/generate-report-with-shiny-app-and
+  output$topreport <- downloadHandler(
+    filename = "topreport.html",
+    content = function(file) {
+      # Copy the report file to a temporary directory before processing it, in
+      # case we don't have write permissions to the current working dir (which
+      # can happen when deployed).
+      tempReport <- file.path(tempdir(), "SOtestreport.Rmd")
+      file.copy("SOtestreport.Rmd", tempReport, overwrite = TRUE)
+      
+      # Set up parameters to pass to Rmd document
+      #  TRIED THIS TOO
+      #  my.dt <- as.data.table(datasetInput())
+      my.dt <- datasetInput()
+      my.params <- list(n = input$obs, 
+                        dt = my.dt,
+                        top.field = names(my.dt)[1])
+      
+      rmarkdown::render(tempReport, output_file = file,
+                        params = my.params,
+                        envir = new.env(parent = globalenv())
+      )
+    }
+  )
+}
 
