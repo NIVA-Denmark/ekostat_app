@@ -84,9 +84,6 @@ shinyServer(function(input, output, session) {
   dfwb_info <- readdb(dbpath, "SELECT * FROM WB_info") # type info WB_ID
   wb <- readdb(dbpath, "SELECT * FROM WB")             # available assessments
   
-  dfwb_info <- dfwb_info %>%
-    inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
-  
   pressure_list<-function(){
     if(!is.null(values$watertypeselected)){
     list<-c("Nutrient loading","Organic loading","Acidification","Harmful substances","Hydrological changes","Morphological changes","General pressure")
@@ -289,21 +286,7 @@ shinyServer(function(input, output, session) {
 
   # ---------------- wb_list: table of WBs matching search criteria  ----------------------
   wb_list<-reactive({
-    df <- dfwb_info
-    if(T){
-      if(!is.null(input$period)){
-        #periodlist<-paste(paste0("'",input$period,"'"),collapse = ",")
-        dffilter <- filter(wb,Period %in% input$period) %>%
-          distinct(WB)
-      }else{
-        dffilter <- distinct(wb,WB)
-      }
-      df <- df %>%
-        inner_join(dffilter,by=c("WB_ID"="WB"))
-      #browser()
-    }
-    #df <- df %>%
-    #  inner_join(distinct(wb,WB),by=c("WB_ID"="WB"))
+    df <- dfwb_info %>% distinct(wb,WB)
     
     values$WBinfo <- ""
     if (!is.null(input$waterType)){
