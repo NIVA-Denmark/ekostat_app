@@ -251,10 +251,14 @@ shinyServer(function(input, output, session) {
   
   # make list of WB types
   type_list <- reactive({
+    #browser()
     Type <- c("ALL")
     all <- data.frame(Type,row.names=F,stringsAsFactors=F)
     df<-dfwb_info
-    df <- df %>% filter(CLR==input$waterType)
+    
+    if(!is.null(input$waterType)){
+      df <- df %>% filter(CLR==input$waterType)
+    }
     
       if (!is.null(input$lan)){
         if(input$lan!="ALL"){
@@ -286,6 +290,7 @@ shinyServer(function(input, output, session) {
 
   # ---------------- wb_list: table of WBs matching search criteria  ----------------------
   wb_list<-reactive({
+    
     df <- dfwb_info 
     
     values$WBinfo <- ""
