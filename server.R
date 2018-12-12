@@ -569,8 +569,8 @@ shinyServer(function(input, output, session) {
         values$dtcurrentindicator<-indicator
         df <- df %>% filter(Indicator==indicator)
       if(nrow(df)>0){
-        dfsave<-df
-        save(dfsave,file="test.Rda")
+        #dfsave<-df
+        #save(dfsave,file="test.Rda")
         
         df <- df %>% distinct(WB,WB_Name,Include)
 
